@@ -24,6 +24,7 @@ fn calc_score(input: &Input, out: &Vec<usize>) -> i64 {
         for i in 0..26 {
             score -= (d + 1 - last[i]) as i64 * input.c[i];
         }
+        // d 日目 に out[d] を開催したときに増える満足度
         score += input.s[d][out[d]];
     }
     score
@@ -40,7 +41,6 @@ trait BinarySearch<T> {
     fn lower_bound(&self, x: &T) -> usize;
     fn upper_bound(&self, x: &T) -> usize;
 }
-
 impl<T: Ord> BinarySearch<T> for [T] {
     fn lower_bound_by<F: Fn(&T) -> bool>(&self, f: F) -> usize {
         let mut ng = -1;
@@ -58,7 +58,6 @@ impl<T: Ord> BinarySearch<T> for [T] {
     fn lower_bound(&self, x: &T) -> usize {
         self.lower_bound_by(|y| y >= x)
     }
-
     fn upper_bound(&self, x: &T) -> usize {
         self.lower_bound_by(|y| y > x)
     }
