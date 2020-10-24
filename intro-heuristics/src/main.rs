@@ -5,23 +5,31 @@ use {
     std::{cmp::*, collections::*, convert::*, iter::*, marker::*, mem::*, ops::*},
 };
 fn main() {
-    input! {d:usize,c:[i64;26],s:[[i64;26];d]};
+    input! {d:usize,c:[i64;26],s:[[i64;26];d],t:[usize;d]};
 
-    let mut usable = BTreeSet::new();
-    for i in 0..26 {
-        usable.insert(i);
-    }
-    for day in 0..d {
-        if usable.len() == 0 {
-            for i in 0..26 {
-                usable.insert(i as usize);
-            }
-        }
-        let contest = *usable.iter().max_by_key(|&&x| c[x as usize]).unwrap();
-        usable.remove(&contest);
-        println!("{}", contest + 1);
-    }
+    let mut input = Input { D: d, s: s, c: c };
+    calc_score(&input, &t);
 }
+struct Input {
+    D: usize,
+    s: Vec<Vec<i64>>,
+    c: Vec<i64>,
+}
+// from editorial
+fn calc_score(input: &Input, out: &Vec<usize>) -> i64 {
+    let mut score = 0i64;
+    let mut last = vec![0; 26];
+    for d in 0..out.len() {
+        last[out[d]] = d + 1;
+        for i in 0..26 {
+            score -= (d + 1 - last[i]) as i64 * input.c[i];
+        }
+        println!("{}", score);
+        score += input.s[d][out[d]];
+    }
+    score
+}
+
 fn sm(start: usize, end: usize) -> i64 {
     ((end * (end + 1) / 2) - (start * (start + 1) / 2)) as i64
 }
