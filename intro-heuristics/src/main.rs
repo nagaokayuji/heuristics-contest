@@ -5,7 +5,7 @@ use {
     std::{cmp::*, collections::*, convert::*, iter::*, marker::*, mem::*, ops::*},
 };
 fn main() {
-    input! {d:usize,c:[i64;26],s:[[i64;26];d],t:[usize;d]};
+    input! {d:usize,c:[i64;26],s:[[i64;26];d],t:[Usize1;d]};
 
     let mut input = Input { D: d, s: s, c: c };
     calc_score(&input, &t);
@@ -24,7 +24,6 @@ fn calc_score(input: &Input, out: &Vec<usize>) -> i64 {
         for i in 0..26 {
             score -= (d + 1 - last[i]) as i64 * input.c[i];
         }
-        println!("{}", score);
         score += input.s[d][out[d]];
     }
     score
