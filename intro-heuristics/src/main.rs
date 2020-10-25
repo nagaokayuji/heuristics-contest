@@ -135,15 +135,16 @@ fn localSearch(input: &Input) -> Vec<usize> {
         .collect::<Vec<_>>();
     let mut score = calc_score(&input, &out);
     while get_time() < TL {
+        // 日
         let d = rng.gen_range(0, input.D);
+        // 変更後のコンテスト
         let q = rng.gen_range(0, 26);
         let old = out[d];
         out[d] = q;
         let new_score = calc_score(&input, &out);
-        if score > new_score {
+        // 劣化したら戻す
+        if !chmax!(score, new_score) {
             out[d] = old;
-        } else {
-            score = new_score;
         }
     }
     out
