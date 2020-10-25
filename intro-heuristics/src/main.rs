@@ -81,6 +81,7 @@ fn evaluate(input: &Input, out: &Vec<usize>, k: usize) -> i64 {
     }
     score
 }
+/// k を色々試す
 fn solve_greedy_evaluate_wrapper(input: &Input) -> Vec<usize> {
     let mut max_score = i64::min_value();
     let mut max_k = 1;
@@ -94,6 +95,7 @@ fn solve_greedy_evaluate_wrapper(input: &Input) -> Vec<usize> {
     let out = solve_greedy_evaluate(&input, max_k);
     out
 }
+/// 評価関数
 fn solve_greedy_evaluate(input: &Input, k: usize) -> Vec<usize> {
     let mut out = vec![];
     for _ in 0..input.D {
@@ -111,6 +113,8 @@ fn solve_greedy_evaluate(input: &Input, k: usize) -> Vec<usize> {
     }
     out
 }
+/// 実行時間
+/// editorial より
 fn get_time() -> f64 {
     // ↓なるほど
     static mut STIME: f64 = -1.0;
