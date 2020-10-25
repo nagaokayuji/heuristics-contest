@@ -9,6 +9,7 @@ macro_rules ! chmin {($ base : expr , $ ($ cmps : expr ) ,+ $ (, ) * ) => {{let 
 macro_rules ! chmax {($ base : expr , $ ($ cmps : expr ) ,+ $ (, ) * ) => {{let cmp_max = max ! ($ ($ cmps ) ,+ ) ; if $ base < cmp_max {$ base = cmp_max ; true } else {false } } } ; }
 macro_rules ! min {($ a : expr $ (, ) * ) => {{$ a } } ; ($ a : expr , $ b : expr $ (, ) * ) => {{std :: cmp :: min ($ a , $ b ) } } ; ($ a : expr , $ ($ rest : expr ) ,+ $ (, ) * ) => {{std :: cmp :: min ($ a , min ! ($ ($ rest ) ,+ ) ) } } ; }
 macro_rules ! max {($ a : expr $ (, ) * ) => {{$ a } } ; ($ a : expr , $ b : expr $ (, ) * ) => {{std :: cmp :: max ($ a , $ b ) } } ; ($ a : expr , $ ($ rest : expr ) ,+ $ (, ) * ) => {{std :: cmp :: max ($ a , max ! ($ ($ rest ) ,+ ) ) } } ; }
+const LIMIT: f64 = 1.88;
 fn main() {
     dbg!(get_time());
     input! {d:usize,c:[i64;26],s:[[i64;26];d],};
@@ -21,7 +22,8 @@ fn main() {
     // }
     // // let ans = solve_greedy_evaluate_wrapper(&input);
     // // let ans = solve_greedy(&input);
-    let ans = localSearch(&input);
+    // let ans = localSearch(&input);
+    let ans = simulated_annealing(&input);
     for &x in ans.iter() {
         println!("{}", x + 1);
     }
@@ -195,7 +197,7 @@ fn get_time() -> f64 {
 /// 一点変更と二点スワップ（editorial）
 fn localSearch(input: &Input) -> Vec<usize> {
     const TL: f64 = 1.98f64;
-    let mut rng = rand::thread_rng();
+    let mut rng = thread_rng();
     // let mut out = (0..input.D)
     //     .map(|_| rng.gen_range(0, 26))
     //     .collect::<Vec<_>>();
@@ -204,7 +206,7 @@ fn localSearch(input: &Input) -> Vec<usize> {
     let mut state = State::new(&input, out);
     let mut score = state.score;
     while get_time() < TL {
-        if rng.gen_bool(0.5) {
+        if rng.gen_bool(0.3) {
             let d1 = rng.gen_range(0, input.D);
             let d2 = rng.gen_range(0, input.D);
             let q1 = rng.gen_range(0, 26);
@@ -219,19 +221,72 @@ fn localSearch(input: &Input) -> Vec<usize> {
                 state.change(&input, d2, old2);
             }
         } else {
-            // let mut out = state.out.clone();
+            let mut out = state.out.clone();
             let d1 = rng.gen_range(0, input.D - 1);
             let d2 = rng.gen_range(d1.saturating_sub(7), (d1 + 7).min(input.D));
             let d3 = rng.gen_range(d2.saturating_sub(7), (d2 + 7).min(input.D));
-            state.out.swap(d1, d2);
-            state.out.swap(d1, d3);
-            let new_score = calc_score(&input, &state.out);
+            out.swap(d1, d2);
+            out.swap(d1, d3);
+            let new_score = calc_score(&input, &out);
             if chmax!(score, new_score) {
-                state = State::new(&input, state.out);
+                state = State::new(&input, out);
             }
         }
     }
     state.out
+}
+
+fn simulated_annealing(input: &Input) -> Vec<usize> {
+    const T0: f64 = 2e3;
+    const T1: f64 = 6e2;
+    const TL: f64 = 1.9;
+    let mut rng = thread_rng();
+    let mut state = State::new(input, solve_greedy_evaluate_wrapper(&input));
+    let mut cnt = 0;
+    let mut T = T0;
+    let mut best = state.score;
+    let mut best_out = state.out.clone();
+    loop {
+        cnt += 1;
+        if cnt % 100 == 0 {
+            let t = get_time() / TL;
+            if t >= 1.0 {
+                break;
+            }
+            T = T0.powf(1.0 - t) * T1.powf(t);
+        }
+        let old_score = state.score;
+        if rng.gen_bool(0.5) {
+            let d = rng.gen_range(0, input.D);
+            let old = state.out[d];
+            state.change(input, d, rng.gen_range(0, 26));
+            if old_score > state.score
+                && !rng.gen_bool(f64::exp((state.score - old_score) as f64 / T))
+            {
+                state.change(input, d, old);
+            }
+        } else {
+            let mut d1 = rng.gen_range(0, input.D);
+            let mut d2 = rng.gen_range(d1.saturating_sub(7), (d1 + 7).min(input.D));
+            while d1 == d2 {
+                d1 = rng.gen_range(0, input.D);
+                d2 = rng.gen_range(d1.saturating_sub(7), (d1 + 7).min(input.D));
+            }
+            let (a, b) = (state.out[d1], state.out[d2]);
+            state.change(input, d1, b);
+            state.change(input, d2, a);
+            if old_score > state.score
+                && !rng.gen_bool(f64::exp((state.score - old_score) as f64 / T))
+            {
+                state.change(input, d1, a);
+                state.change(input, d2, b);
+            }
+        }
+        if chmax!(best, state.score) {
+            best_out = state.out.clone();
+        }
+    }
+    best_out
 }
 
 fn sm(start: usize, end: usize) -> i64 {
