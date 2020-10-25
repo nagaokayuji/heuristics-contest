@@ -10,6 +10,7 @@ macro_rules ! chmax {($ base : expr , $ ($ cmps : expr ) ,+ $ (, ) * ) => {{let 
 macro_rules ! min {($ a : expr $ (, ) * ) => {{$ a } } ; ($ a : expr , $ b : expr $ (, ) * ) => {{std :: cmp :: min ($ a , $ b ) } } ; ($ a : expr , $ ($ rest : expr ) ,+ $ (, ) * ) => {{std :: cmp :: min ($ a , min ! ($ ($ rest ) ,+ ) ) } } ; }
 macro_rules ! max {($ a : expr $ (, ) * ) => {{$ a } } ; ($ a : expr , $ b : expr $ (, ) * ) => {{std :: cmp :: max ($ a , $ b ) } } ; ($ a : expr , $ ($ rest : expr ) ,+ $ (, ) * ) => {{std :: cmp :: max ($ a , max ! ($ ($ rest ) ,+ ) ) } } ; }
 const LIMIT: f64 = 1.88;
+#[fastout]
 fn main() {
     dbg!(get_time());
     input! {d:usize,c:[i64;26],s:[[i64;26];d],};
@@ -196,7 +197,7 @@ fn get_time() -> f64 {
 /// ランダムな初期階からスタート
 /// 一点変更と二点スワップ（editorial）
 fn localSearch(input: &Input) -> Vec<usize> {
-    const TL: f64 = 1.98f64;
+    const TL: f64 = 0.3f64;
     let mut rng = thread_rng();
     // let mut out = (0..input.D)
     //     .map(|_| rng.gen_range(0, 26))
@@ -206,7 +207,7 @@ fn localSearch(input: &Input) -> Vec<usize> {
     let mut state = State::new(&input, out);
     let mut score = state.score;
     while get_time() < TL {
-        if rng.gen_bool(0.3) {
+        if rng.gen_bool(0.5) {
             let d1 = rng.gen_range(0, input.D);
             let d2 = rng.gen_range(0, input.D);
             let q1 = rng.gen_range(0, 26);
@@ -241,9 +242,12 @@ fn localSearch(input: &Input) -> Vec<usize> {
 fn simulated_annealing(input: &Input) -> Vec<usize> {
     const T0: f64 = 2e3; // 開始時点の温度
     const T1: f64 = 6e2; // 低い温度
-    const TL: f64 = 1.9;
+    const TL: f64 = 1.92;
     let mut rng = thread_rng();
-    let mut state = State::new(input, solve_greedy_evaluate_wrapper(&input));
+    // 局所探索からのパターン
+    // let mut state = State::new(input, localSearch(&input));
+    // ランダムな解からのパターン
+    let mut state = State::new(input, (0..input.D).map(|_| rng.gen_range(0, 26)).collect());
     let mut cnt = 0;
     let mut T = T0;
     let mut best = state.score;
