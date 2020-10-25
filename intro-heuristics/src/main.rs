@@ -264,7 +264,7 @@ fn simulated_annealing(input: &Input) -> Vec<usize> {
         }
         let old_score = state.score;
         // d日目のコンテストを適当に変更 or d1 日目 と d2 日目をスワップ
-        if rng.gen_bool(0.2) {
+        if rng.gen_bool(0.3) {
             let d = rng.gen_range(0, input.D);
             let old = state.out[d];
             state.change(input, d, rng.gen_range(0, 26));
@@ -274,7 +274,7 @@ fn simulated_annealing(input: &Input) -> Vec<usize> {
             {
                 state.change(input, d, old);
             }
-        } else if rng.gen_bool(0.3) {
+        } else if rng.gen_bool(0.2) {
             let d1 = rng.gen_range(0, input.D);
             let old1 = state.out[d1];
             let d2 = rng.gen_range(0, input.D);
@@ -287,7 +287,7 @@ fn simulated_annealing(input: &Input) -> Vec<usize> {
                 state.change(input, d1, old1);
                 state.change(input, d2, old2);
             }
-        } else if rng.gen_bool(0.2) {
+        } else if rng.gen_bool(0.3) {
             let mut d1 = rng.gen_range(0, input.D);
             let mut d2 = rng.gen_range(d1.saturating_sub(8), (d1 + 8).min(input.D));
             let (a, b) = (state.out[d1], state.out[d2]);
