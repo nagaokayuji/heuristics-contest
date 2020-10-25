@@ -36,6 +36,8 @@ fn calc_score(input: &Input, out: &Vec<usize>) -> i64 {
     }
     score
 }
+/// 日毎に最大になる選択を採用する
+/// score: 62634806
 fn solve_greedy(input: &Input) -> Vec<usize> {
     let mut out = vec![];
     for day in 0..input.D {
