@@ -134,9 +134,11 @@ fn get_time() -> f64 {
 fn localSearch(input: &Input) -> Vec<usize> {
     const TL: f64 = 1.98f64;
     let mut rng = rand::thread_rng();
-    let mut out = (0..input.D)
-        .map(|_| rng.gen_range(0, 26))
-        .collect::<Vec<_>>();
+    // let mut out = (0..input.D)
+    //     .map(|_| rng.gen_range(0, 26))
+    //     .collect::<Vec<_>>();
+    // 初期値を貪欲
+    let mut out = solve_greedy_evaluate_wrapper(&input);
     let mut score = calc_score(&input, &out);
     while get_time() < TL {
         // 日
