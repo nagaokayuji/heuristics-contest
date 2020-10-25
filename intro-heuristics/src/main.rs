@@ -248,13 +248,13 @@ fn simulated_annealing(input: &Input) -> Vec<usize> {
     // let mut state = State::new(input, localSearch(&input));
     // ランダムな解からのパターン
     let mut state = State::new(input, (0..input.D).map(|_| rng.gen_range(0, 26)).collect());
-    let mut cnt = 0;
     let mut T = T0;
     let mut best = state.score;
     let mut best_out = state.out.clone();
+    let mut cnt = 0i64;
     loop {
         cnt += 1;
-        if cnt % 100 == 0 {
+        if cnt % 85 == 0 {
             // 時刻を[0,1] に正規化
             let t = get_time() / TL;
             if t >= 1.0 {
@@ -264,7 +264,7 @@ fn simulated_annealing(input: &Input) -> Vec<usize> {
         }
         let old_score = state.score;
         // d日目のコンテストを適当に変更 or d1 日目 と d2 日目をスワップ
-        if rng.gen_bool(0.6) {
+        if rng.gen_bool(0.2) {
             let d = rng.gen_range(0, input.D);
             let old = state.out[d];
             state.change(input, d, rng.gen_range(0, 26));
@@ -274,13 +274,22 @@ fn simulated_annealing(input: &Input) -> Vec<usize> {
             {
                 state.change(input, d, old);
             }
-        } else {
-            let mut d1 = rng.gen_range(0, input.D);
-            let mut d2 = rng.gen_range(d1.saturating_sub(5), (d1 + 5).min(input.D));
-            while d1 == d2 {
-                d1 = rng.gen_range(0, input.D);
-                d2 = rng.gen_range(d1.saturating_sub(5), (d1 + 5).min(input.D));
+        } else if rng.gen_bool(0.3) {
+            let d1 = rng.gen_range(0, input.D);
+            let old1 = state.out[d1];
+            let d2 = rng.gen_range(0, input.D);
+            let old2 = state.out[d2];
+            state.change(input, d1, rng.gen_range(0, 26));
+            state.change(input, d2, rng.gen_range(0, 26));
+            if old_score > state.score
+                && !rng.gen_bool(f64::exp((state.score - old_score) as f64 / T))
+            {
+                state.change(input, d1, old1);
+                state.change(input, d2, old2);
             }
+        } else if rng.gen_bool(0.2) {
+            let mut d1 = rng.gen_range(0, input.D);
+            let mut d2 = rng.gen_range(d1.saturating_sub(8), (d1 + 8).min(input.D));
             let (a, b) = (state.out[d1], state.out[d2]);
             state.change(input, d1, b);
             state.change(input, d2, a);
@@ -289,6 +298,21 @@ fn simulated_annealing(input: &Input) -> Vec<usize> {
             {
                 state.change(input, d1, a);
                 state.change(input, d2, b);
+            }
+        } else {
+            let mut d1 = rng.gen_range(0, input.D);
+            let mut d2 = rng.gen_range(d1.saturating_sub(8), (d1 + 8).min(input.D));
+            let mut d3 = rng.gen_range(d1.saturating_sub(8), (d2 + 8).min(input.D));
+            let (a, b, c) = (state.out[d1], state.out[d2], state.out[d3]);
+            state.change(input, d1, b);
+            state.change(input, d2, c);
+            state.change(input, d3, a);
+            if old_score > state.score
+                && !rng.gen_bool(f64::exp((state.score - old_score) as f64 / T))
+            {
+                state.change(input, d1, a);
+                state.change(input, d2, b);
+                state.change(input, d3, c);
             }
         }
         if chmax!(best, state.score) {
