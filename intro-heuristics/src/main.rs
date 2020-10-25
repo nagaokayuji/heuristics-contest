@@ -236,9 +236,11 @@ fn localSearch(input: &Input) -> Vec<usize> {
     state.out
 }
 
+/// 焼きなまし法
+/// editorial pp.10
 fn simulated_annealing(input: &Input) -> Vec<usize> {
-    const T0: f64 = 2e3;
-    const T1: f64 = 6e2;
+    const T0: f64 = 2e3; // 開始時点の温度
+    const T1: f64 = 6e2; // 低い温度
     const TL: f64 = 1.9;
     let mut rng = thread_rng();
     let mut state = State::new(input, solve_greedy_evaluate_wrapper(&input));
@@ -249,6 +251,7 @@ fn simulated_annealing(input: &Input) -> Vec<usize> {
     loop {
         cnt += 1;
         if cnt % 100 == 0 {
+            // 時刻を[0,1] に正規化
             let t = get_time() / TL;
             if t >= 1.0 {
                 break;
@@ -256,10 +259,12 @@ fn simulated_annealing(input: &Input) -> Vec<usize> {
             T = T0.powf(1.0 - t) * T1.powf(t);
         }
         let old_score = state.score;
-        if rng.gen_bool(0.5) {
+        // d日目のコンテストを適当に変更 or d1 日目 と d2 日目をスワップ
+        if rng.gen_bool(0.6) {
             let d = rng.gen_range(0, input.D);
             let old = state.out[d];
             state.change(input, d, rng.gen_range(0, 26));
+            // 劣化しても一定確率で変更する
             if old_score > state.score
                 && !rng.gen_bool(f64::exp((state.score - old_score) as f64 / T))
             {
@@ -267,10 +272,10 @@ fn simulated_annealing(input: &Input) -> Vec<usize> {
             }
         } else {
             let mut d1 = rng.gen_range(0, input.D);
-            let mut d2 = rng.gen_range(d1.saturating_sub(7), (d1 + 7).min(input.D));
+            let mut d2 = rng.gen_range(d1.saturating_sub(5), (d1 + 5).min(input.D));
             while d1 == d2 {
                 d1 = rng.gen_range(0, input.D);
-                d2 = rng.gen_range(d1.saturating_sub(7), (d1 + 7).min(input.D));
+                d2 = rng.gen_range(d1.saturating_sub(5), (d1 + 5).min(input.D));
             }
             let (a, b) = (state.out[d1], state.out[d2]);
             state.change(input, d1, b);
