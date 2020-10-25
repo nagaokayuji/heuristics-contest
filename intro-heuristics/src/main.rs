@@ -247,7 +247,9 @@ fn simulated_annealing(input: &Input) -> Vec<usize> {
     // 局所探索からのパターン
     // let mut state = State::new(input, localSearch(&input));
     // ランダムな解からのパターン
-    let mut state = State::new(input, (0..input.D).map(|_| rng.gen_range(0, 26)).collect());
+    // let mut state = State::new(input, (0..input.D).map(|_| rng.gen_range(0, 26)).collect());
+    // 貪欲解からのパターン
+    let mut state = State::new(input, solve_greedy_evaluate_wrapper(&input));
     let mut T = T0;
     let mut best = state.score;
     let mut best_out = state.out.clone();
