@@ -156,10 +156,13 @@ fn localSearch(input: &Input) -> Vec<usize> {
             }
         } else {
             let d1 = rng.gen_range(0, input.D - 1);
-            let d2 = rng.gen_range(d1 + 1, (d1 + 16).min(input.D));
+            let d2 = rng.gen_range(d1.saturating_sub(7), (d1 + 7).min(input.D));
+            let d3 = rng.gen_range(d2.saturating_sub(7), (d2 + 7).min(input.D));
             out.swap(d1, d2);
+            out.swap(d1, d3);
             let new_score = calc_score(&input, &out);
             if !chmax!(score, new_score) {
+                out.swap(d1, d3);
                 out.swap(d1, d2);
             }
         }
