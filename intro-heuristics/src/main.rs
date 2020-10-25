@@ -70,15 +70,21 @@ impl State {
         // スコアの差分
         self.score += (cost(prev, d + 1) + cost(d + 1, next) - cost(prev, next)) * input.c[old_i];
 
+        // d 日目以降で new_i を開催する日
         let p = self.ds[new_i]
             .iter()
             .position(|a| *a > d + 1)
             .unwrap_or(self.ds[new_i].len());
+        // 一つ前の開催日
         let prev = self.ds[new_i].get(p.wrapping_sub(1)).cloned().unwrap_or(0);
+        // 一つ後の開催日
         let next = self.ds[new_i].get(p).cloned().unwrap_or(input.D + 1);
+        // ds に追加
         self.ds[new_i].insert(p, d + 1);
+        // 差分計算
         self.score -= (cost(prev, d + 1) + cost(d + 1, next) - cost(prev, next)) * input.c[new_i];
         self.score += input.s[d][new_i] - input.s[d][old_i];
+        // out 書き換え
         self.out[d] = new_i;
     }
 }
