@@ -131,6 +131,7 @@ fn get_time() -> f64 {
 }
 /// 局所探索（山登り法）
 /// ランダムな初期階からスタート
+/// 一点変更と二点スワップ（editorial）
 fn localSearch(input: &Input) -> Vec<usize> {
     const TL: f64 = 1.98f64;
     let mut rng = rand::thread_rng();
@@ -141,16 +142,26 @@ fn localSearch(input: &Input) -> Vec<usize> {
     let mut out = solve_greedy_evaluate_wrapper(&input);
     let mut score = calc_score(&input, &out);
     while get_time() < TL {
-        // 日
-        let d = rng.gen_range(0, input.D);
-        // 変更後のコンテスト
-        let q = rng.gen_range(0, 26);
-        let old = out[d];
-        out[d] = q;
-        let new_score = calc_score(&input, &out);
-        // 劣化したら戻す
-        if !chmax!(score, new_score) {
-            out[d] = old;
+        if rng.gen_bool(0.5) {
+            // 日
+            let d = rng.gen_range(0, input.D);
+            // 変更後のコンテスト
+            let q = rng.gen_range(0, 26);
+            let old = out[d];
+            out[d] = q;
+            let new_score = calc_score(&input, &out);
+            // 劣化したら戻す
+            if !chmax!(score, new_score) {
+                out[d] = old;
+            }
+        } else {
+            let d1 = rng.gen_range(0, input.D - 1);
+            let d2 = rng.gen_range(d1 + 1, (d1 + 16).min(input.D));
+            out.swap(d1, d2);
+            let new_score = calc_score(&input, &out);
+            if !chmax!(score, new_score) {
+                out.swap(d1, d2);
+            }
         }
     }
     out
