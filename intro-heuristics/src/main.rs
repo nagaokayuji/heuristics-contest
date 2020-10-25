@@ -204,7 +204,7 @@ fn localSearch(input: &Input) -> Vec<usize> {
     let mut state = State::new(&input, out);
     let mut score = state.score;
     while get_time() < TL {
-        if rng.gen_bool(0.3) {
+        if rng.gen_bool(0.5) {
             let d1 = rng.gen_range(0, input.D);
             let d2 = rng.gen_range(0, input.D);
             let q1 = rng.gen_range(0, 26);
@@ -219,15 +219,15 @@ fn localSearch(input: &Input) -> Vec<usize> {
                 state.change(&input, d2, old2);
             }
         } else {
-            let mut out = state.out.clone();
+            // let mut out = state.out.clone();
             let d1 = rng.gen_range(0, input.D - 1);
             let d2 = rng.gen_range(d1.saturating_sub(7), (d1 + 7).min(input.D));
             let d3 = rng.gen_range(d2.saturating_sub(7), (d2 + 7).min(input.D));
-            out.swap(d1, d2);
-            out.swap(d1, d3);
-            let new_score = calc_score(&input, &out);
+            state.out.swap(d1, d2);
+            state.out.swap(d1, d3);
+            let new_score = calc_score(&input, &state.out);
             if chmax!(score, new_score) {
-                state = State::new(&input, out);
+                state = State::new(&input, state.out);
             }
         }
     }
