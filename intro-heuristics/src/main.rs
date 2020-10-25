@@ -240,8 +240,8 @@ fn localSearch(input: &Input) -> Vec<usize> {
 /// 焼きなまし法
 /// editorial pp.10
 fn simulated_annealing(input: &Input) -> Vec<usize> {
-    const T0: f64 = 2e3; // 開始時点の温度
-    const T1: f64 = 6e2; // 低い温度
+    const T0: f64 = 4e3; // 開始時点の温度
+    const T1: f64 = 8e2; // 低い温度
     const TL: f64 = 1.96;
     let mut rng = thread_rng();
     // 局所探索からのパターン
@@ -256,7 +256,7 @@ fn simulated_annealing(input: &Input) -> Vec<usize> {
     let mut cnt = 0i64;
     loop {
         cnt += 1;
-        if cnt % 70 == 0 {
+        if cnt % 100 == 0 {
             // 時刻を[0,1] に正規化
             let t = get_time() / TL;
             if t >= 1.0 {
@@ -267,7 +267,7 @@ fn simulated_annealing(input: &Input) -> Vec<usize> {
         let old_score = state.score;
         let mut switch = rng.gen_range(0, 100);
         // d日目のコンテストを適当に変更 or d1 日目 と d2 日目をスワップ
-        if switch < 15 {
+        if switch < 37 {
             let d = rng.gen_range(0, input.D);
             let old = state.out[d];
             state.change(input, d, rng.gen_range(0, 26));
@@ -293,7 +293,7 @@ fn simulated_annealing(input: &Input) -> Vec<usize> {
                 state.change(input, d1, old1);
                 state.change(input, d2, old2);
             }
-        } else if switch < 65 {
+        } else if switch < 87 {
             let mut d1 = rng.gen_range(0, input.D);
             let mut d2 = rng.gen_range(d1.saturating_sub(9), (d1 + 9).min(input.D));
             let (a, b) = (state.out[d1], state.out[d2]);
