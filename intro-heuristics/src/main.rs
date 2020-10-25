@@ -112,6 +112,7 @@ fn solve_greedy_evaluate(input: &Input, k: usize) -> Vec<usize> {
     out
 }
 fn get_time() -> f64 {
+    // ↓なるほど
     static mut STIME: f64 = -1.0;
     let t = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -124,6 +125,8 @@ fn get_time() -> f64 {
         ms - STIME
     }
 }
+/// 局所探索（山登り法）
+/// ランダムな初期階からスタート
 fn localSearch(input: &Input) -> Vec<usize> {
     const TL: f64 = 1.98f64;
     let mut rng = rand::thread_rng();
@@ -149,32 +152,4 @@ fn localSearch(input: &Input) -> Vec<usize> {
 fn sm(start: usize, end: usize) -> i64 {
     ((end * (end + 1) / 2) - (start * (start + 1) / 2)) as i64
 }
-static MX: usize = 1010101;
-static MOD: i64 = 1000000007;
-static INF: i64 = std::i64::MAX >> 1;
-trait BinarySearch<T> {
-    fn lower_bound_by<F: Fn(&T) -> bool>(&self, f: F) -> usize;
-    fn lower_bound(&self, x: &T) -> usize;
-    fn upper_bound(&self, x: &T) -> usize;
-}
-impl<T: Ord> BinarySearch<T> for [T] {
-    fn lower_bound_by<F: Fn(&T) -> bool>(&self, f: F) -> usize {
-        let mut ng = -1;
-        let mut ok = self.len() as i64;
-        while (ok as i32 - ng as i32).abs() > 1 {
-            let mid = (ok + ng) / 2;
-            if f(&self[mid as usize]) {
-                ok = mid;
-            } else {
-                ng = mid;
-            }
-        }
-        ok as usize
-    }
-    fn lower_bound(&self, x: &T) -> usize {
-        self.lower_bound_by(|y| y >= x)
-    }
-    fn upper_bound(&self, x: &T) -> usize {
-        self.lower_bound_by(|y| y > x)
-    }
-}
+const INF: i64 = 1 << 60;
