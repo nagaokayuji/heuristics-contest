@@ -12,3 +12,4 @@ path = "src/main.rs"
 
 [dependencies]
 proconio = { version = "=0.3.6", features = ["derive"] }
+rand = "0.7.3"

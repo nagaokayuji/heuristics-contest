@@ -1,6 +1,7 @@
 #![allow(unused, non_snake_case, dead_code, non_upper_case_globals)]
 use {
     proconio::{marker::*, *},
+    rand::*,
     std::*,
     std::{cmp::*, collections::*, convert::*, iter::*, marker::*, mem::*, ops::*},
 };
@@ -9,13 +10,17 @@ macro_rules ! chmax {($ base : expr , $ ($ cmps : expr ) ,+ $ (, ) * ) => {{let 
 macro_rules ! min {($ a : expr $ (, ) * ) => {{$ a } } ; ($ a : expr , $ b : expr $ (, ) * ) => {{std :: cmp :: min ($ a , $ b ) } } ; ($ a : expr , $ ($ rest : expr ) ,+ $ (, ) * ) => {{std :: cmp :: min ($ a , min ! ($ ($ rest ) ,+ ) ) } } ; }
 macro_rules ! max {($ a : expr $ (, ) * ) => {{$ a } } ; ($ a : expr , $ b : expr $ (, ) * ) => {{std :: cmp :: max ($ a , $ b ) } } ; ($ a : expr , $ ($ rest : expr ) ,+ $ (, ) * ) => {{std :: cmp :: max ($ a , max ! ($ ($ rest ) ,+ ) ) } } ; }
 fn main() {
+    dbg!(get_time());
     input! {d:usize,c:[i64;26],s:[[i64;26];d]};
 
     let mut input = Input { D: d, s: s, c: c };
-    let ans = solve_greedy(&input);
+    // let ans = solve_greedy_evaluate_wrapper(&input);
+    // let ans = solve_greedy(&input);
+    let ans = localSearch(&input);
     for &x in ans.iter() {
         println!("{}", x + 1);
     }
+    dbg!(get_time());
 }
 struct Input {
     D: usize,
@@ -52,6 +57,91 @@ fn solve_greedy(input: &Input) -> Vec<usize> {
             out.pop();
         }
         out.push(best_i);
+    }
+    out
+}
+
+/// editorial pp.3
+/// 評価関数
+/// k 日後までコンテストを開催しない場合における満足度
+fn evaluate(input: &Input, out: &Vec<usize>, k: usize) -> i64 {
+    let mut score = 0i64;
+    let mut last = vec![0; 26];
+    for d in 0..out.len() {
+        last[out[d]] = d + 1;
+        for i in 0..26 {
+            score -= (d + 1 - last[i]) as i64 * input.c[i];
+        }
+        score += input.s[d][out[d]];
+    }
+    for d in out.len()..(out.len() + k).min(input.D) {
+        for i in 0..26 {
+            score -= (d + 1 - last[i]) as i64 * input.c[i];
+        }
+    }
+    score
+}
+fn solve_greedy_evaluate_wrapper(input: &Input) -> Vec<usize> {
+    let mut max_score = i64::min_value();
+    let mut max_k = 1;
+    for k in 1..14 {
+        let out = solve_greedy_evaluate(&input, k);
+        let score = calc_score(&input, &out);
+        if chmax!(max_score, score) {
+            max_k = k;
+        }
+    }
+    let out = solve_greedy_evaluate(&input, max_k);
+    out
+}
+fn solve_greedy_evaluate(input: &Input, k: usize) -> Vec<usize> {
+    let mut out = vec![];
+    for _ in 0..input.D {
+        let mut max_score = i64::min_value();
+        let mut best_i = 0;
+        for i in 0..26 {
+            out.push(i);
+            let score = evaluate(&input, &out, k);
+            if chmax!(max_score, score) {
+                best_i = i;
+            }
+            out.pop();
+        }
+        out.push(best_i);
+    }
+    out
+}
+fn get_time() -> f64 {
+    static mut STIME: f64 = -1.0;
+    let t = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap();
+    let ms = t.as_secs() as f64 + t.subsec_nanos() as f64 * 1e-9;
+    unsafe {
+        if STIME < 0.0 {
+            STIME = ms;
+        }
+        ms - STIME
+    }
+}
+fn localSearch(input: &Input) -> Vec<usize> {
+    const TL: f64 = 1.98f64;
+    let mut rng = rand::thread_rng();
+    let mut out = (0..input.D)
+        .map(|_| rng.gen_range(0, 26))
+        .collect::<Vec<_>>();
+    let mut score = calc_score(&input, &out);
+    while get_time() < TL {
+        let d = rng.gen_range(0, input.D);
+        let q = rng.gen_range(0, 26);
+        let old = out[d];
+        out[d] = q;
+        let new_score = calc_score(&input, &out);
+        if score > new_score {
+            out[d] = old;
+        } else {
+            score = new_score;
+        }
     }
     out
 }
