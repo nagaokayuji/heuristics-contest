@@ -22,12 +22,19 @@ fn main() {
     }
     dbg!(get_time());
 }
+/// 入力
 struct Input {
     D: usize,
     s: Vec<Vec<i64>>,
     c: Vec<i64>,
 }
-// from editorial
+struct State {
+    out: Vec<usize>,
+    score: i64,
+    ds: Vec<Vec<usize>>,
+}
+
+/// from editorial
 fn calc_score(input: &Input, out: &Vec<usize>) -> i64 {
     let mut score = 0i64;
     let mut last = vec![0; 26];
@@ -133,7 +140,7 @@ fn get_time() -> f64 {
 /// ランダムな初期階からスタート
 /// 一点変更と二点スワップ（editorial）
 fn localSearch(input: &Input) -> Vec<usize> {
-    const TL: f64 = 1.98f64;
+    const TL: f64 = 1.988f64;
     let mut rng = rand::thread_rng();
     // let mut out = (0..input.D)
     //     .map(|_| rng.gen_range(0, 26))
@@ -142,17 +149,19 @@ fn localSearch(input: &Input) -> Vec<usize> {
     let mut out = solve_greedy_evaluate_wrapper(&input);
     let mut score = calc_score(&input, &out);
     while get_time() < TL {
-        if rng.gen_bool(0.5) {
-            // 日
-            let d = rng.gen_range(0, input.D);
-            // 変更後のコンテスト
-            let q = rng.gen_range(0, 26);
-            let old = out[d];
-            out[d] = q;
+        if rng.gen_bool(0.3) {
+            let d1 = rng.gen_range(0, input.D);
+            let d2 = rng.gen_range(0, input.D);
+            let q1 = rng.gen_range(0, 26);
+            let q2 = rng.gen_range(0, 26);
+            let old1 = out[d1];
+            let old2 = out[d2];
+            out[d1] = q1;
+            out[d2] = q2;
             let new_score = calc_score(&input, &out);
-            // 劣化したら戻す
             if !chmax!(score, new_score) {
-                out[d] = old;
+                out[d1] = old1;
+                out[d2] = old2;
             }
         } else {
             let d1 = rng.gen_range(0, input.D - 1);
