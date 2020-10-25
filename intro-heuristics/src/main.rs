@@ -11,22 +11,21 @@ macro_rules ! min {($ a : expr $ (, ) * ) => {{$ a } } ; ($ a : expr , $ b : exp
 macro_rules ! max {($ a : expr $ (, ) * ) => {{$ a } } ; ($ a : expr , $ b : expr $ (, ) * ) => {{std :: cmp :: max ($ a , $ b ) } } ; ($ a : expr , $ ($ rest : expr ) ,+ $ (, ) * ) => {{std :: cmp :: max ($ a , max ! ($ ($ rest ) ,+ ) ) } } ; }
 fn main() {
     dbg!(get_time());
-    input! {d:usize,c:[i64;26],s:[[i64;26];d],
-    t:[Usize1;d],m:usize,dq:[(Usize1,Usize1);m]};
+    input! {d:usize,c:[i64;26],s:[[i64;26];d],};
 
     let mut input = Input { D: d, s: s, c: c };
-    let mut state = State::new(&input, t);
-    for &(d, q) in dq.iter() {
-        state.change(&input, d, q);
-        println!("{}", state.score);
-    }
+    // let mut state = State::new(&input, t);
+    // for &(d, q) in dq.iter() {
+    //     state.change(&input, d, q);
+    //     println!("{}", state.score);
+    // }
     // // let ans = solve_greedy_evaluate_wrapper(&input);
     // // let ans = solve_greedy(&input);
-    // let ans = localSearch(&input);
-    // for &x in ans.iter() {
-    //     println!("{}", x + 1);
-    // }
-    // dbg!(get_time());
+    let ans = localSearch(&input);
+    for &x in ans.iter() {
+        println!("{}", x + 1);
+    }
+    dbg!(get_time());
 }
 /// 入力
 struct Input {
@@ -195,43 +194,44 @@ fn get_time() -> f64 {
 /// ランダムな初期階からスタート
 /// 一点変更と二点スワップ（editorial）
 fn localSearch(input: &Input) -> Vec<usize> {
-    const TL: f64 = 1.988f64;
+    const TL: f64 = 1.98f64;
     let mut rng = rand::thread_rng();
     // let mut out = (0..input.D)
     //     .map(|_| rng.gen_range(0, 26))
     //     .collect::<Vec<_>>();
     // 初期値を貪欲
     let mut out = solve_greedy_evaluate_wrapper(&input);
-    let mut score = calc_score(&input, &out);
+    let mut state = State::new(&input, out);
+    let mut score = state.score;
     while get_time() < TL {
         if rng.gen_bool(0.3) {
             let d1 = rng.gen_range(0, input.D);
             let d2 = rng.gen_range(0, input.D);
             let q1 = rng.gen_range(0, 26);
             let q2 = rng.gen_range(0, 26);
-            let old1 = out[d1];
-            let old2 = out[d2];
-            out[d1] = q1;
-            out[d2] = q2;
-            let new_score = calc_score(&input, &out);
+            let old1 = state.out[d1];
+            let old2 = state.out[d2];
+            state.change(&input, d1, q1);
+            state.change(&input, d2, q2);
+            let new_score = state.score;
             if !chmax!(score, new_score) {
-                out[d1] = old1;
-                out[d2] = old2;
+                state.change(&input, d1, old1);
+                state.change(&input, d2, old2);
             }
         } else {
+            let mut out = state.out.clone();
             let d1 = rng.gen_range(0, input.D - 1);
             let d2 = rng.gen_range(d1.saturating_sub(7), (d1 + 7).min(input.D));
             let d3 = rng.gen_range(d2.saturating_sub(7), (d2 + 7).min(input.D));
             out.swap(d1, d2);
             out.swap(d1, d3);
             let new_score = calc_score(&input, &out);
-            if !chmax!(score, new_score) {
-                out.swap(d1, d3);
-                out.swap(d1, d2);
+            if chmax!(score, new_score) {
+                state = State::new(&input, out);
             }
         }
     }
-    out
+    state.out
 }
 
 fn sm(start: usize, end: usize) -> i64 {
