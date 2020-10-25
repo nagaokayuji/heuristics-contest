@@ -11,16 +11,22 @@ macro_rules ! min {($ a : expr $ (, ) * ) => {{$ a } } ; ($ a : expr , $ b : exp
 macro_rules ! max {($ a : expr $ (, ) * ) => {{$ a } } ; ($ a : expr , $ b : expr $ (, ) * ) => {{std :: cmp :: max ($ a , $ b ) } } ; ($ a : expr , $ ($ rest : expr ) ,+ $ (, ) * ) => {{std :: cmp :: max ($ a , max ! ($ ($ rest ) ,+ ) ) } } ; }
 fn main() {
     dbg!(get_time());
-    input! {d:usize,c:[i64;26],s:[[i64;26];d]};
+    input! {d:usize,c:[i64;26],s:[[i64;26];d],
+    t:[Usize1;d],m:usize,dq:[(Usize1,Usize1);m]};
 
     let mut input = Input { D: d, s: s, c: c };
-    // let ans = solve_greedy_evaluate_wrapper(&input);
-    // let ans = solve_greedy(&input);
-    let ans = localSearch(&input);
-    for &x in ans.iter() {
-        println!("{}", x + 1);
+    let mut state = State::new(&input, t);
+    for &(d, q) in dq.iter() {
+        state.change(&input, d, q);
+        println!("{}", state.score);
     }
-    dbg!(get_time());
+    // // let ans = solve_greedy_evaluate_wrapper(&input);
+    // // let ans = solve_greedy(&input);
+    // let ans = localSearch(&input);
+    // for &x in ans.iter() {
+    //     println!("{}", x + 1);
+    // }
+    // dbg!(get_time());
 }
 /// 入力
 struct Input {
@@ -28,10 +34,53 @@ struct Input {
     s: Vec<Vec<i64>>,
     c: Vec<i64>,
 }
+/// 差分計算高速化
+/// editorial pp.7
+/// ds:= 各コンテストタイプごとの開催日
 struct State {
     out: Vec<usize>,
     score: i64,
     ds: Vec<Vec<usize>>,
+}
+
+fn cost(a: usize, b: usize) -> i64 {
+    let d = b - a;
+    (d * (d - 1) / 2) as i64
+}
+impl State {
+    fn new(input: &Input, out: Vec<usize>) -> State {
+        let mut ds = vec![vec![]; 26];
+        for d in 0..input.D {
+            ds[out[d]].push(d + 1);
+        }
+        let score = calc_score(&input, &out);
+        State { out, score, ds }
+    }
+    fn change(&mut self, input: &Input, d: usize, new_i: usize) {
+        // d 日目に開催していたコンテスト
+        let old_i = self.out[d];
+        // index (position() := true を返す最初の要素のインデックス)
+        let p = self.ds[old_i].iter().position(|a| *a == d + 1).unwrap();
+        // 一つ前の開催日
+        let prev = self.ds[old_i].get(p.wrapping_sub(1)).cloned().unwrap_or(0);
+        // 一つ後の開催日
+        let next = self.ds[old_i].get(p + 1).cloned().unwrap_or(input.D + 1);
+        // 該当コンテストを削除
+        self.ds[old_i].remove(p);
+        // スコアの差分
+        self.score += (cost(prev, d + 1) + cost(d + 1, next) - cost(prev, next)) * input.c[old_i];
+
+        let p = self.ds[new_i]
+            .iter()
+            .position(|a| *a > d + 1)
+            .unwrap_or(self.ds[new_i].len());
+        let prev = self.ds[new_i].get(p.wrapping_sub(1)).cloned().unwrap_or(0);
+        let next = self.ds[new_i].get(p).cloned().unwrap_or(input.D + 1);
+        self.ds[new_i].insert(p, d + 1);
+        self.score -= (cost(prev, d + 1) + cost(d + 1, next) - cost(prev, next)) * input.c[new_i];
+        self.score += input.s[d][new_i] - input.s[d][old_i];
+        self.out[d] = new_i;
+    }
 }
 
 /// from editorial
