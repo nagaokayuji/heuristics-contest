@@ -247,9 +247,9 @@ fn simulated_annealing(input: &Input) -> Vec<usize> {
     // 局所探索からのパターン
     // let mut state = State::new(input, localSearch(&input));
     // ランダムな解からのパターン
-    // let mut state = State::new(input, (0..input.D).map(|_| rng.gen_range(0, 26)).collect());
+    let mut state = State::new(input, (0..input.D).map(|_| rng.gen_range(0, 26)).collect());
     // 貪欲解からのパターン
-    let mut state = State::new(input, solve_greedy_evaluate_wrapper(&input));
+    // let mut state = State::new(input, solve_greedy_evaluate_wrapper(&input));
     let mut T = T0;
     let mut best = state.score;
     let mut best_out = state.out.clone();
@@ -265,8 +265,9 @@ fn simulated_annealing(input: &Input) -> Vec<usize> {
             T = T0.powf(1.0 - t) * T1.powf(t);
         }
         let old_score = state.score;
+        let mut switch = rng.gen_range(0, 100);
         // d日目のコンテストを適当に変更 or d1 日目 と d2 日目をスワップ
-        if rng.gen_bool(0.3) {
+        if switch < 15 {
             let d = rng.gen_range(0, input.D);
             let old = state.out[d];
             state.change(input, d, rng.gen_range(0, 26));
@@ -276,7 +277,7 @@ fn simulated_annealing(input: &Input) -> Vec<usize> {
             {
                 state.change(input, d, old);
             }
-        } else if rng.gen_bool(0.2) {
+        } else if switch < 50 {
             let (mut d1, mut d2) = (0, 0);
             while d1 == d2 {
                 d1 = rng.gen_range(0, input.D);
@@ -292,7 +293,7 @@ fn simulated_annealing(input: &Input) -> Vec<usize> {
                 state.change(input, d1, old1);
                 state.change(input, d2, old2);
             }
-        } else if rng.gen_bool(0.3) {
+        } else if switch < 65 {
             let mut d1 = rng.gen_range(0, input.D);
             let mut d2 = rng.gen_range(d1.saturating_sub(9), (d1 + 9).min(input.D));
             let (a, b) = (state.out[d1], state.out[d2]);
