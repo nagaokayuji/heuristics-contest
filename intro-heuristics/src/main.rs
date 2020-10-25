@@ -242,7 +242,7 @@ fn localSearch(input: &Input) -> Vec<usize> {
 fn simulated_annealing(input: &Input) -> Vec<usize> {
     const T0: f64 = 2e3; // 開始時点の温度
     const T1: f64 = 6e2; // 低い温度
-    const TL: f64 = 1.92;
+    const TL: f64 = 1.91;
     let mut rng = thread_rng();
     // 局所探索からのパターン
     // let mut state = State::new(input, localSearch(&input));
@@ -256,7 +256,7 @@ fn simulated_annealing(input: &Input) -> Vec<usize> {
     let mut cnt = 0i64;
     loop {
         cnt += 1;
-        if cnt % 85 == 0 {
+        if cnt % 222 == 0 {
             // 時刻を[0,1] に正規化
             let t = get_time() / TL;
             if t >= 1.0 {
@@ -277,9 +277,12 @@ fn simulated_annealing(input: &Input) -> Vec<usize> {
                 state.change(input, d, old);
             }
         } else if rng.gen_bool(0.2) {
-            let d1 = rng.gen_range(0, input.D);
+            let (mut d1, mut d2) = (0, 0);
+            while d1 == d2 {
+                d1 = rng.gen_range(0, input.D);
+                d2 = rng.gen_range(0, input.D);
+            }
             let old1 = state.out[d1];
-            let d2 = rng.gen_range(0, input.D);
             let old2 = state.out[d2];
             state.change(input, d1, rng.gen_range(0, 26));
             state.change(input, d2, rng.gen_range(0, 26));
@@ -291,7 +294,7 @@ fn simulated_annealing(input: &Input) -> Vec<usize> {
             }
         } else if rng.gen_bool(0.3) {
             let mut d1 = rng.gen_range(0, input.D);
-            let mut d2 = rng.gen_range(d1.saturating_sub(8), (d1 + 8).min(input.D));
+            let mut d2 = rng.gen_range(d1.saturating_sub(7), (d1 + 7).min(input.D));
             let (a, b) = (state.out[d1], state.out[d2]);
             state.change(input, d1, b);
             state.change(input, d2, a);
@@ -302,9 +305,14 @@ fn simulated_annealing(input: &Input) -> Vec<usize> {
                 state.change(input, d2, b);
             }
         } else {
-            let mut d1 = rng.gen_range(0, input.D);
-            let mut d2 = rng.gen_range(d1.saturating_sub(8), (d1 + 8).min(input.D));
-            let mut d3 = rng.gen_range(d1.saturating_sub(8), (d2 + 8).min(input.D));
+            let mut d1 = 0;
+            let mut d2 = 0;
+            let mut d3 = 0;
+            while d1 == d2 || d2 == d3 || d3 == d1 {
+                d1 = rng.gen_range(0, input.D);
+                d2 = rng.gen_range(d1.saturating_sub(5), (d1 + 5).min(input.D));
+                d3 = rng.gen_range(d1.saturating_sub(5), (d2 + 5).min(input.D));
+            }
             let (a, b, c) = (state.out[d1], state.out[d2], state.out[d3]);
             state.change(input, d1, b);
             state.change(input, d2, c);
