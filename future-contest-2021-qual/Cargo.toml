@@ -1,0 +1,23 @@
+[package]
+name = "future-contest-2021-qual"
+version = "0.1.0"
+authors = ["Yuji Nagaoka <yvay5cqe@gmail.com>"]
+edition = "2018"
+
+# usage
+# ~/Library/Preferencesのリンクを書き換える
+# alias ca='cargo atcoder'
+# alias cas='cargo atcoder submit'
+# alias cate='cargo atcoder test'
+# alias crun='cargo run --bin'
+# unsetopt correct
+
+
+# dependencies added to new project
+[dependencies]
+ rand = "0.7.3"
+ proconio = { version = "0.3.6", features = ["derive"] }
+
+[profile.release]
+lto = true
+panic = 'abort'
