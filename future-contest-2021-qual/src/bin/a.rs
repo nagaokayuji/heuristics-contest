@@ -43,7 +43,7 @@ fn centering(input: &Input) {
     s3.pick_block(4);
     s4.pick_block(5);
     s5.pick_block(10);
-    // dbg!((s1.score, s2.score, s3.score, s4.score, s5.score));
+    dbg!((s1.score, s2.score, s3.score, s4.score, s5.score));
 
     state.score = 123456;
     if chmin!(state.score, s1.score) {
@@ -61,6 +61,7 @@ fn centering(input: &Input) {
     if chmin!(state.score, s5.score) {
         state = s5;
     }
+    // state = s4;
 
     let mut nice = state.took.clone();
     let mut gr_out = vec![];
@@ -69,16 +70,11 @@ fn centering(input: &Input) {
     }
     gr_out.reverse();
 
-    // dbg!("o---");
     let out = localSearch(&input, &gr_out);
-    // dbg!("out1");
-    let mut s6 = State::new(&input);
-    s6.pick_by_out(&out);
-    dbg!((state.score, s6.score));
-    state = s6;
+    state = State::new(&input);
 
-    // 配置
-    state.placing2();
+    // // 配置
+    state.pick_by_out_and_place(&out);
     // 集める
     state.collect();
     // 出力
@@ -98,7 +94,7 @@ impl Input {}
 
 /// 局所探索
 fn localSearch(input: &Input, initial: &Vec<usize>) -> Vec<usize> {
-    let mut TL = 0.3f64;
+    let mut TL = 1.5f64;
     let mut out = vec![0; 100];
     out = initial.clone();
     let mut rng = thread_rng();
@@ -143,6 +139,7 @@ struct State {
     operations: Vec<char>,
     score: usize,
     took: Vec<usize>,
+    available: Vec<Vec<bool>>,
 }
 impl State {
     /// 最初の状態
@@ -150,6 +147,15 @@ impl State {
         let mut rev_field = vec![vec![None; 20]; 20];
         for (i, &(x, y)) in input.xy.iter().enumerate() {
             rev_field[x][y] = Some(i);
+        }
+        let mut available = vec![vec![false; 20]; 20];
+        let center = (9, 9);
+        for i in 0..20 {
+            for j in 0..20 {
+                if dif((i, j), center) <= 7 {
+                    available[i][j] = true;
+                }
+            }
         }
         State {
             pos: (0, 0),
@@ -163,6 +169,7 @@ impl State {
             operations: vec![],
             score: 0,
             took: vec![],
+            available: available,
         }
     }
     fn move_to(&mut self, dist: (usize, usize)) {
@@ -278,6 +285,63 @@ impl State {
             let target = self.field[x].unwrap();
             self.move_to(target);
             self.push();
+        }
+    }
+    fn pick_by_out_and_place(&mut self, out: &Vec<usize>) {
+        // ひろう
+        for &x in out.iter() {
+            let target = self.field[x].unwrap();
+            if self.place_judge(target, self.rev_field[target.0][target.1].unwrap())
+                && self.available[target.0][target.1]
+            {
+                self.available[target.0][target.1] = false;
+                continue;
+            }
+            self.move_to_and_place(target);
+            self.push();
+        }
+        // 余ったやつをおく
+        while let Some(pp) = self.took.last() {
+            let mut best = (0, 0);
+            let mut best_dis = INF;
+            for i in 0..20 {
+                for j in 0..20 {
+                    if self.available[i][j] && chmin!(best_dis, dif((i, j), self.pos)) {
+                        best = (i, j);
+                    }
+                }
+            }
+            self.available[best.0][best.1] = false;
+            self.move_to_and_place(best);
+            self.pop();
+        }
+    }
+    fn place_judge(&mut self, now: (usize, usize), num: usize) -> bool {
+        (now.1 <= 8 && num < 30)
+            || (now.1 >= 11 && num >= 70)
+            || (num < 30 && num < 60 && now.0 > 6 && now.1 > 6 && now.0 < 13 && now.1 < 13)
+    }
+    fn move_to_and_place(&mut self, dist: (usize, usize)) {
+        while self.pos != dist {
+            if self.took.len() > 0 && self.available[self.pos.0][self.pos.1] {
+                // dbg!("おく");
+                if self.place_judge(self.pos, *self.took.last().unwrap()) {
+                    self.pop();
+                    self.available[self.pos.0][self.pos.1] = false;
+                }
+            }
+            if self.pos.0 < dist.0 {
+                self.move_to((self.pos.0 + 1, self.pos.1));
+            }
+            if self.pos.0 > dist.0 {
+                self.move_to((self.pos.0 - 1, self.pos.1));
+            }
+            if self.pos.1 < dist.1 {
+                self.move_to((self.pos.0, self.pos.1 + 1));
+            }
+            if self.pos.1 > dist.1 {
+                self.move_to((self.pos.0, self.pos.1 - 1));
+            }
         }
     }
     fn placing1(&mut self) {
