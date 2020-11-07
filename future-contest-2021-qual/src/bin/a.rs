@@ -20,11 +20,6 @@ fn greedy(input: &Input) {
         state.push();
     }
     state.output();
-    // dbg!(&state.pos);
-    // state.output();
-    // state.move_to((2, 5));
-    // state.output();
-    // dbg!(&state.pos);
 }
 struct Input {
     xy: Vec<(usize, usize)>,
@@ -35,7 +30,8 @@ impl Input {}
 struct State {
     pos: (usize, usize),
     operations: Vec<char>,
-    took: Deque,
+    score: usize,
+    took: Vec<usize>,
 }
 impl State {
     /// 最初の状態
@@ -43,10 +39,12 @@ impl State {
         State {
             pos: (0, 0),
             operations: vec![],
-            took: Deque::new(123456),
+            score: 0,
+            took: vec![],
         }
     }
     fn move_to(&mut self, dist: (usize, usize)) {
+        let bef = self.operations.len();
         for _ in self.pos.0..dist.0 {
             self.operations.push('D');
         }
@@ -59,11 +57,16 @@ impl State {
         for _ in dist.1..self.pos.1 {
             self.operations.push('L');
         }
+        let aft = self.operations.len();
+        self.score += aft - bef;
         // 最後に書き換え
         self.pos = dist;
     }
     fn push(&mut self) {
         self.operations.push('I');
+    }
+    fn pop(&mut self) {
+        self.operations.push('O');
     }
     fn output(&self) {
         for &op in self.operations.iter() {
