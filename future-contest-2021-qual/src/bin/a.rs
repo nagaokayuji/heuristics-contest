@@ -73,61 +73,15 @@ fn centering(input: &Input) {
     let out = localSearch(&input, &gr_out);
     // dbg!("out1");
     let mut s6 = State::new(&input);
-    // dbg!(&s6.field);
     s6.pick_by_out(&out);
-    // dbg!(&s6.score);
-    // dbg!(calc_score_pick_up(&input, &gr_out));
-    // 1. 回収の順番最適化
+    dbg!((state.score, s6.score));
     state = s6;
 
-    // ===============
-    // 全部回収した
-    let mut used = vec![vec![false; 20]; 20];
-
-    let mut last = state.pos;
-    let (xs, xg, xr) = if last.0 + 10 >= 20 {
-        (last.0 - 10, last.0, true)
-    } else {
-        (last.0, last.0 + 10, false)
-    };
-    let (ys, yg, yr) = if last.1 + 10 >= 20 {
-        (last.1 - 10, last.1, true)
-    } else {
-        (last.1, last.1 + 10, false)
-    };
-    // dbg!((xs, xg, xr, ys, yg, yr));
-    while state.took.len() > 0 {
-        let mut nearest_dis = INF;
-        let mut nearest = None;
-
-        for i in xs..xg {
-            for j in ys..yg {
-                // dbg!((i, j));
-                let i = if xr { xg + xs - i } else { i };
-                let j = if yr { yg + ys - j } else { j };
-                // dbg!((i, j));
-                // dbg!("==l");
-                if used[i][j] {
-                    continue;
-                }
-                if chmin!(nearest_dis, dif(state.pos, (i, j))) {
-                    nearest = Some((i, j));
-                }
-            }
-        }
-        if let Some(ij) = nearest {
-            used[ij.0][ij.1] = true;
-            state.move_to(ij);
-            state.pop();
-        }
-    }
-    // // 最後
-    // かるい。
-    for to in 0..100 {
-        let target = state.field[to].unwrap();
-        state.move_to(target);
-        state.push();
-    }
+    // 配置
+    state.placing1();
+    // 集める
+    state.collect();
+    // 出力
     state.output();
 }
 /// 二点間の距離
@@ -144,16 +98,10 @@ impl Input {}
 
 /// 局所探索
 fn localSearch(input: &Input, initial: &Vec<usize>) -> Vec<usize> {
-    let mut TL = 1.9f64;
+    let mut TL = 0.3f64;
     let mut out = vec![0; 100];
-    // for i in 0..100 {
-    //     out[i] = i;
-    // }
     out = initial.clone();
     let mut rng = thread_rng();
-    // let mut state = State::new(&input);
-    // swap -> calc
-    // let mut pu = PickUp::new(input);
     let mut score = calc_score_pick_up(&input, &out);
     let mut cnt = 0i64;
     loop {
@@ -163,9 +111,12 @@ fn localSearch(input: &Input, initial: &Vec<usize>) -> Vec<usize> {
         }
         let p1 = rng.gen_range(0, 100);
         let p2 = rng.gen_range(0, 100);
+        let p3 = rng.gen_range(0, 100);
 
         let mut new_out = out.clone();
         new_out.swap(p1, p2);
+        new_out.swap(p1, p3);
+        new_out.swap(p2, p3);
         let new_score = calc_score_pick_up(&input, &new_out);
         if score > new_score {
             out = new_out;
@@ -173,38 +124,6 @@ fn localSearch(input: &Input, initial: &Vec<usize>) -> Vec<usize> {
     }
     out
 }
-
-// struct PickUp {
-//     score: i64,
-//     pos: (usize, usize),
-//     out: Vec<usize>,
-// }
-// impl PickUp {
-//     fn new(input: &Input) -> PickUp {
-//         let mut out = vec![0; 100];
-//         for i in 0..100 {
-//             out[i] = 100;
-//         }
-//         PickUp {
-//             score: calc_score_pick_up(&input, &out),
-//             pos: (0, 0),
-//             out: out,
-//         }
-//     }
-//     fn move_to(&mut self, target: (usize, usize)) {
-//         self.score += dif(target, self.pos);
-//         self.pos = target;
-//     }
-//     // fn swap(&mut self, a: usize, b: usize) {
-//     //     // a<bにする
-//     //     if a == b {
-//     //         return;
-//     //     }
-//     //     let (a, b) = if a > b { (b, a) } else { (a, b) };
-//     //     if a==0{
-//     //     }
-//     // }
-// }
 fn calc_score_pick_up(input: &Input, out: &Vec<usize>) -> i64 {
     let mut now = (0, 0);
     let mut score = 0i64;
@@ -357,6 +276,36 @@ impl State {
         // dbg!(&out);
         for &x in out.iter() {
             let target = self.field[x].unwrap();
+            self.move_to(target);
+            self.push();
+        }
+    }
+    fn placing1(&mut self) {
+        let mut last = self.pos;
+        let (xs, xg, xr) = if last.0 + 10 >= 20 {
+            (last.0 - 10, last.0, true)
+        } else {
+            (last.0, last.0 + 10, false)
+        };
+        let (ys, yg, yr) = if last.1 + 10 >= 20 {
+            (last.1 - 10, last.1, true)
+        } else {
+            (last.1, last.1 + 10, false)
+        };
+
+        while let Some(pp) = self.took.last() {
+            let t = pp / 10;
+            let p = pp % 10;
+            let dx = t;
+            let dy = if t % 2 == 0 { p } else { 10 - p - 1 };
+            let target = (xs + dx, ys + dy);
+            self.move_to(target);
+            self.pop();
+        }
+    }
+    fn collect(&mut self) {
+        for to in 0..100 {
+            let target = self.field[to].unwrap();
             self.move_to(target);
             self.push();
         }
