@@ -1,6 +1,7 @@
 #![allow(unused, non_snake_case, dead_code, non_upper_case_globals)]
 use {
     proconio::{marker::*, *},
+    rand::*,
     std::*,
     std::{cmp::*, collections::*, convert::*, iter::*, marker::*, mem::*, ops::*},
 };
@@ -12,6 +13,7 @@ fn main() {
     input! {//
         xy:[(usize,usize);100],
     }
+    get_time();
     let mut input = Input { xy: xy };
     // greedy(&input);
     centering(&input);
@@ -30,63 +32,6 @@ fn greedy(input: &Input) {
 fn centering(input: &Input) {
     const INF: i64 = 1 << 60;
     let mut state = State::new(&input);
-    let mut visited = vec![false; 100];
-    let mut nearest = 0;
-    let mut neareset_distance = INF;
-    for i in 0..100 {
-        if chmin!(neareset_distance, dif((0, 0), input.xy[i])) {
-            nearest = i;
-        }
-    }
-    // dbg!(nearest);
-    // dbg!(&input.xy[nearest]);
-    visited[nearest] = true;
-    state.move_to(input.xy[nearest]);
-    state.push();
-
-    let mut stack = vec![];
-    stack.push(nearest);
-    // 1. てきとうに回収
-    {
-        // while let Some(pp) = stack.pop() {
-        //     visited[pp] = true;
-        //     let mut nearest_dis = INF;
-        //     let mut nearest = None;
-        //     for i in 0..100 {
-        //         if i == pp || visited[i] {
-        //             continue;
-        //         }
-        //         if chmin!(nearest_dis, dif(input.xy[pp], input.xy[i])) {
-        //             nearest = Some(i);
-        //         }
-        //     }
-        //     if let Some(a) = nearest {
-        //         state.move_to(input.xy[a]);
-        //         state.push();
-        //         stack.push(a);
-        //     }
-        // }
-    }
-    // 2. ブロック分けて回収
-    {
-        // // 20の約数がいい？
-        // let mut block_size = 4;
-        // for base_x in 0..20 / block_size {
-        //     for y in 0..20 {
-        //         let y = if base_x % 2 == 0 { y } else { 20 - y - 1 };
-        //         for dx in 0..block_size {
-        //             let dx = if y % 2 == 0 { dx } else { block_size - dx - 1 };
-        //             let target = (base_x * block_size + dx, y);
-        //             if state.rev_field[target.0][target.1] != None {
-        //                 state.move_to(target);
-        //                 state.push();
-        //             }
-        //         }
-        //     }
-        // }
-    }
-    // dbg!(&state.operations);
-    // dbg!(&state.took);
 
     let mut s1 = state.clone();
     let mut s2 = state.clone();
@@ -116,7 +61,24 @@ fn centering(input: &Input) {
     if chmin!(state.score, s5.score) {
         state = s5;
     }
+
+    let mut nice = state.took.clone();
+    let mut gr_out = vec![];
+    while let Some(x) = nice.pop() {
+        gr_out.push(x);
+    }
+    gr_out.reverse();
+
+    // dbg!("o---");
+    let out = localSearch(&input, &gr_out);
+    // dbg!("out1");
+    let mut s6 = State::new(&input);
+    // dbg!(&s6.field);
+    s6.pick_by_out(&out);
+    // dbg!(&s6.score);
+    // dbg!(calc_score_pick_up(&input, &gr_out));
     // 1. 回収の順番最適化
+    state = s6;
 
     // ===============
     // 全部回収した
@@ -180,6 +142,79 @@ struct Input {
 }
 impl Input {}
 
+/// 局所探索
+fn localSearch(input: &Input, initial: &Vec<usize>) -> Vec<usize> {
+    let mut TL = 1.9f64;
+    let mut out = vec![0; 100];
+    // for i in 0..100 {
+    //     out[i] = i;
+    // }
+    out = initial.clone();
+    let mut rng = thread_rng();
+    // let mut state = State::new(&input);
+    // swap -> calc
+    // let mut pu = PickUp::new(input);
+    let mut score = calc_score_pick_up(&input, &out);
+    let mut cnt = 0i64;
+    loop {
+        cnt += 1;
+        if cnt % 300 == 0 && get_time() > TL {
+            break;
+        }
+        let p1 = rng.gen_range(0, 100);
+        let p2 = rng.gen_range(0, 100);
+
+        let mut new_out = out.clone();
+        new_out.swap(p1, p2);
+        let new_score = calc_score_pick_up(&input, &new_out);
+        if score > new_score {
+            out = new_out;
+        }
+    }
+    out
+}
+
+// struct PickUp {
+//     score: i64,
+//     pos: (usize, usize),
+//     out: Vec<usize>,
+// }
+// impl PickUp {
+//     fn new(input: &Input) -> PickUp {
+//         let mut out = vec![0; 100];
+//         for i in 0..100 {
+//             out[i] = 100;
+//         }
+//         PickUp {
+//             score: calc_score_pick_up(&input, &out),
+//             pos: (0, 0),
+//             out: out,
+//         }
+//     }
+//     fn move_to(&mut self, target: (usize, usize)) {
+//         self.score += dif(target, self.pos);
+//         self.pos = target;
+//     }
+//     // fn swap(&mut self, a: usize, b: usize) {
+//     //     // a<bにする
+//     //     if a == b {
+//     //         return;
+//     //     }
+//     //     let (a, b) = if a > b { (b, a) } else { (a, b) };
+//     //     if a==0{
+//     //     }
+//     // }
+// }
+fn calc_score_pick_up(input: &Input, out: &Vec<usize>) -> i64 {
+    let mut now = (0, 0);
+    let mut score = 0i64;
+    for &x in out.iter() {
+        let target = input.xy[x];
+        score += dif(target, now);
+        now = target;
+    }
+    score
+}
 /// 解と現在地
 #[derive(Clone)]
 struct State {
@@ -318,6 +353,14 @@ impl State {
             }
         }
     }
+    fn pick_by_out(&mut self, out: &Vec<usize>) {
+        // dbg!(&out);
+        for &x in out.iter() {
+            let target = self.field[x].unwrap();
+            self.move_to(target);
+            self.push();
+        }
+    }
 }
 const INF: i64 = 1 << 60;
 struct Deque {
@@ -394,5 +437,20 @@ impl<T: Ord> BinarySearch<T> for [T] {
     }
     fn upper_bound(&self, x: &T) -> usize {
         self.lower_bound_by(|y| y > x)
+    }
+}
+
+fn get_time() -> f64 {
+    // ↓なるほど
+    static mut STIME: f64 = -1.0;
+    let t = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap();
+    let ms = t.as_secs() as f64 + t.subsec_nanos() as f64 * 1e-9;
+    unsafe {
+        if STIME < 0.0 {
+            STIME = ms;
+        }
+        ms - STIME
     }
 }
