@@ -447,12 +447,13 @@ impl State {
             left.push(i);
         }
         // ２こまでもつ
+        let mut k = 2;
         for &x in left.iter() {
             if self.over.contains(&x) {
                 self.picking(x);
             } else {
                 let target = self.field[x].unwrap();
-                self.move_to_and_collect(target, x, 4);
+                self.move_to_and_collect(target, x, 3);
             }
             // self.move_to(target);
             // self.push();
