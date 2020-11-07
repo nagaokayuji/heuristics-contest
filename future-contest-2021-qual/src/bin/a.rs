@@ -18,10 +18,48 @@ struct State {
     pos: (usize, usize),
     operations: Vec<char>,
 }
+impl State {
+    fn move_to(&mut self, input: &Input, dist: (usize, usize)) {
+        self.pos = dist;
+        // TODO: 移動
+    }
+}
 struct Deque {
     data: Vec<(usize, usize)>, // カードの数字, index
     left: usize,
     right: usize,
+    size: usize,
+    buf_size: usize,
+}
+impl Deque {
+    fn push_front(&mut self, x: (usize, usize)) {
+        self.left = (self.buf_size + self.left - 1) % self.buf_size;
+        self.data[self.left] = x;
+        self.size += 1;
+    }
+    fn pop_front(&mut self) -> Option<(usize, usize)> {
+        if self.size == 0 {
+            return None;
+        }
+        let ret = self.data[self.left];
+        self.left += 1;
+        self.size -= 1;
+        Some(ret)
+    }
+    fn push_back(&mut self, x: (usize, usize)) {
+        self.right = (self.right + 1) % self.buf_size;
+        self.data[self.right] = x;
+        self.size += 1;
+    }
+    fn pop_back(&mut self) -> Option<(usize, usize)> {
+        if self.size == 0 {
+            return None;
+        }
+        let ret = self.data[self.right];
+        self.right -= 1;
+        self.size -= 1;
+        Some(ret)
+    }
 }
 
 pub trait BinarySearch<T> {
