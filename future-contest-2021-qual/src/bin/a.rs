@@ -9,19 +9,67 @@ fn main() {
         xy:[(usize,usize);100],
     }
     let mut input = Input { xy: xy };
+    greedy(&input);
+}
+fn greedy(input: &Input) {
+    // 初期値
+    let mut state = State::new();
+    for to in 0..100 {
+        let target = input.xy[to];
+        state.move_to(target);
+        state.push();
+    }
+    state.output();
+    // dbg!(&state.pos);
+    // state.output();
+    // state.move_to((2, 5));
+    // state.output();
+    // dbg!(&state.pos);
 }
 struct Input {
     xy: Vec<(usize, usize)>,
 }
+impl Input {}
 
+/// 解と現在地
 struct State {
     pos: (usize, usize),
     operations: Vec<char>,
+    took: Deque,
 }
 impl State {
-    fn move_to(&mut self, input: &Input, dist: (usize, usize)) {
+    /// 最初の状態
+    fn new() -> State {
+        State {
+            pos: (0, 0),
+            operations: vec![],
+            took: Deque::new(123456),
+        }
+    }
+    fn move_to(&mut self, dist: (usize, usize)) {
+        for _ in self.pos.0..dist.0 {
+            self.operations.push('D');
+        }
+        for _ in dist.0..self.pos.0 {
+            self.operations.push('U');
+        }
+        for _ in self.pos.1..dist.1 {
+            self.operations.push('R');
+        }
+        for _ in dist.1..self.pos.1 {
+            self.operations.push('L');
+        }
+        // 最後に書き換え
         self.pos = dist;
-        // TODO: 移動
+    }
+    fn push(&mut self) {
+        self.operations.push('I');
+    }
+    fn output(&self) {
+        for &op in self.operations.iter() {
+            print!("{}", op);
+        }
+        println!();
     }
 }
 struct Deque {
@@ -32,6 +80,18 @@ struct Deque {
     buf_size: usize,
 }
 impl Deque {
+    /// 初期化
+    ///
+    /// n バッファサイズ
+    fn new(n: usize) -> Deque {
+        Deque {
+            data: vec![(0, 0); n],
+            left: 0,
+            right: 0,
+            size: 0,
+            buf_size: n,
+        }
+    }
     fn push_front(&mut self, x: (usize, usize)) {
         self.left = (self.buf_size + self.left - 1) % self.buf_size;
         self.data[self.left] = x;
