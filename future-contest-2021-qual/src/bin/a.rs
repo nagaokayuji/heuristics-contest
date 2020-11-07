@@ -474,7 +474,7 @@ impl State {
         self.move_to(one.1);
         self.push();
         self.over.clear();
-        for &(x, target) in lefts.iter() {
+        for &(x, target) in lefts.iter().rev() {
             self.move_to(target);
             self.push();
             self.over.push(x);
@@ -514,7 +514,7 @@ impl State {
         self.push();
 
         self.over.clear();
-        for &(x, target) in lefts.iter() {
+        for &(x, target) in lefts.iter().rev() {
             self.move_to(target);
             self.push();
             self.over.push(x);
