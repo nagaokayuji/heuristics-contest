@@ -78,7 +78,7 @@ fn centering(input: &Input) {
     state = s6;
 
     // 配置
-    state.placing1();
+    state.placing2();
     // 集める
     state.collect();
     // 出力
@@ -300,6 +300,34 @@ impl State {
             let dy = if t % 2 == 0 { p } else { 10 - p - 1 };
             let target = (xs + dx, ys + dy);
             self.move_to(target);
+            self.pop();
+        }
+    }
+    /// ひし形
+    fn placing2(&mut self) {
+        // 10,10 を中心
+        let mut available = vec![vec![false; 20]; 20];
+        let center = (9, 9);
+        for i in 0..20 {
+            for j in 0..20 {
+                if dif((i, j), center) <= 7 {
+                    available[i][j] = true;
+                }
+            }
+        }
+
+        while let Some(pp) = self.took.last() {
+            let mut best = (0, 0);
+            let mut best_dis = INF;
+            for i in 0..20 {
+                for j in 0..20 {
+                    if available[i][j] && chmin!(best_dis, dif((i, j), self.pos)) {
+                        best = (i, j);
+                    }
+                }
+            }
+            available[best.0][best.1] = false;
+            self.move_to(best);
             self.pop();
         }
     }
