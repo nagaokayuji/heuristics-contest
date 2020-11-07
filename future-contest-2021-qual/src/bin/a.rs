@@ -76,7 +76,7 @@ fn centering(input: &Input) {
     // // 配置
     state.pick_by_out_and_place(&out);
     // 集める
-    state.collect();
+    state.collect_imp();
     // 出力
     state.output();
 }
@@ -140,6 +140,7 @@ struct State {
     score: usize,
     took: Vec<usize>,
     available: Vec<Vec<bool>>,
+    over: Vec<usize>,
 }
 impl State {
     /// 最初の状態
@@ -170,6 +171,7 @@ impl State {
             score: 0,
             took: vec![],
             available: available,
+            over: vec![],
         }
     }
     fn move_to(&mut self, dist: (usize, usize)) {
@@ -313,13 +315,47 @@ impl State {
             }
             self.available[best.0][best.1] = false;
             self.move_to_and_place(best);
+            if self.place_judge(self.pos, *self.took.last().unwrap()) {
+                self.pop();
+                continue;
+            }
+
+            if self.took.len() >= 2 {
+                let first = self.took.pop().unwrap();
+                let second = self.took.pop().unwrap();
+                self.took.push(second);
+                self.took.push(first);
+                if self.place_judge(self.pos, second) {
+                    let mut best2 = (0, 0);
+                    let mut bestdis = INF;
+                    assert!(self.pos == best);
+                    for i in 0..20 {
+                        for j in 0..20 {
+                            if self.available[i][j]
+                                && self.rev_field[i][j] == None
+                                && chmin!(bestdis, dif((i, j), best))
+                            {
+                                best2 = (i, j);
+                            }
+                        }
+                    }
+                    self.move_to(best2);
+                    self.pop();
+                    self.move_to(best);
+                    self.pop();
+                    self.available[best2.0][best2.1] = false;
+                    // self.move_to(best2);
+                    // self.push();
+                    continue;
+                }
+            }
             self.pop();
         }
     }
     fn place_judge(&mut self, now: (usize, usize), num: usize) -> bool {
-        (now.1 <= 8 && num < 30)
-            || (now.1 >= 11 && num >= 70)
-            || (num < 30 && num < 60 && now.0 > 6 && now.1 > 6 && now.0 < 13 && now.1 < 13)
+        (now.1 <= 9 && num < 40)
+            || (now.1 >= 9 && num >= 40)
+            || (num > 30 && num < 70 && now.0 > 5 && now.1 > 5 && now.0 < 14 && now.1 < 14)
     }
     fn move_to_and_place(&mut self, dist: (usize, usize)) {
         while self.pos != dist {
@@ -395,6 +431,7 @@ impl State {
             self.pop();
         }
     }
+    /// 集める
     fn collect(&mut self) {
         for to in 0..100 {
             let target = self.field[to].unwrap();
@@ -402,7 +439,101 @@ impl State {
             self.push();
         }
     }
+    /// 改善版
+    ///
+    fn collect_imp(&mut self) {
+        let mut left = vec![];
+        for i in (0..100) {
+            left.push(i);
+        }
+        // ２こまでもつ
+        for &x in left.iter() {
+            if self.over.contains(&x) {
+                self.picking(x);
+            } else {
+                let target = self.field[x].unwrap();
+                self.move_to_and_collect(target, x, 4);
+            }
+            // self.move_to(target);
+            // self.push();
+        }
+    }
+    fn picking(&mut self, target: usize) {
+        let mut lefts = vec![];
+        let mut one = ((0, (0, 0)));
+        for &x in self.over.clone().iter() {
+            let target_x = self.find_near_pos(self.pos);
+            self.move_to(target_x);
+            self.pop();
+            if x == target {
+                one = (x, target_x);
+            } else {
+                lefts.push((x, target_x));
+            }
+        }
+        self.move_to(one.1);
+        self.push();
+        self.over.clear();
+        for &(x, target) in lefts.iter() {
+            self.move_to(target);
+            self.push();
+            self.over.push(x);
+        }
+    }
+    fn move_to_and_collect(&mut self, dist: (usize, usize), target: usize, k: usize) {
+        // let mut took = vec![];
+        while self.pos != dist {
+            if let Some(fnd) = self.rev_field[self.pos.0][self.pos.1] {
+                // 拾っておく
+                if target < fnd && target + k > fnd {
+                    self.push();
+                    self.over.push(fnd);
+                }
+            }
+            if self.pos.0 < dist.0 {
+                self.move_to((self.pos.0 + 1, self.pos.1));
+            }
+            if self.pos.0 > dist.0 {
+                self.move_to((self.pos.0 - 1, self.pos.1));
+            }
+            if self.pos.1 < dist.1 {
+                self.move_to((self.pos.0, self.pos.1 + 1));
+            }
+            if self.pos.1 > dist.1 {
+                self.move_to((self.pos.0, self.pos.1 - 1));
+            }
+        }
+        let mut lefts = vec![];
+        for &x in self.over.clone().iter() {
+            let target_x = self.find_near_pos(self.pos);
+            lefts.push((x, target_x));
+            self.move_to(target_x);
+            self.pop();
+        }
+        self.move_to(dist);
+        self.push();
+
+        self.over.clear();
+        for &(x, target) in lefts.iter() {
+            self.move_to(target);
+            self.push();
+            self.over.push(x);
+        }
+    }
+    fn find_near_pos(&mut self, now: (usize, usize)) -> (usize, usize) {
+        let mut best = (0, 0);
+        let mut best_dis = INF;
+        for i in 0..20 {
+            for j in 0..20 {
+                if self.rev_field[i][j] == None && chmin!(best_dis, dif((i, j), self.pos)) {
+                    best = (i, j);
+                }
+            }
+        }
+        best
+    }
 }
+
 const INF: i64 = 1 << 60;
 struct Deque {
     data: Vec<(usize, usize)>, // カードの数字, index
