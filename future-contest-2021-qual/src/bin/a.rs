@@ -46,33 +46,105 @@ fn centering(input: &Input) {
 
     let mut stack = vec![];
     stack.push(nearest);
-    while let Some(pp) = stack.pop() {
-        visited[pp] = true;
-        let mut nearest_dis = INF;
-        let mut nearest = None;
-        for i in 0..100 {
-            if i == pp || visited[i] {
-                continue;
-            }
-            if chmin!(nearest_dis, dif(input.xy[pp], input.xy[i])) {
-                nearest = Some(i);
-            }
-        }
-        if let Some(a) = nearest {
-            state.move_to(input.xy[a]);
-            state.push();
-            stack.push(a);
-        }
+    // 1. てきとうに回収
+    {
+        // while let Some(pp) = stack.pop() {
+        //     visited[pp] = true;
+        //     let mut nearest_dis = INF;
+        //     let mut nearest = None;
+        //     for i in 0..100 {
+        //         if i == pp || visited[i] {
+        //             continue;
+        //         }
+        //         if chmin!(nearest_dis, dif(input.xy[pp], input.xy[i])) {
+        //             nearest = Some(i);
+        //         }
+        //     }
+        //     if let Some(a) = nearest {
+        //         state.move_to(input.xy[a]);
+        //         state.push();
+        //         stack.push(a);
+        //     }
+        // }
+    }
+    // 2. ブロック分けて回収
+    {
+        // // 20の約数がいい？
+        // let mut block_size = 4;
+        // for base_x in 0..20 / block_size {
+        //     for y in 0..20 {
+        //         let y = if base_x % 2 == 0 { y } else { 20 - y - 1 };
+        //         for dx in 0..block_size {
+        //             let dx = if y % 2 == 0 { dx } else { block_size - dx - 1 };
+        //             let target = (base_x * block_size + dx, y);
+        //             if state.rev_field[target.0][target.1] != None {
+        //                 state.move_to(target);
+        //                 state.push();
+        //             }
+        //         }
+        //     }
+        // }
     }
     // dbg!(&state.operations);
     // dbg!(&state.took);
+
+    let mut s1 = state.clone();
+    let mut s2 = state.clone();
+    let mut s3 = state.clone();
+    let mut s4 = state.clone();
+    let mut s5 = state.clone();
+    s1.pick_shortest();
+    s2.pick_block(2);
+    s3.pick_block(4);
+    s4.pick_block(5);
+    s5.pick_block(10);
+    // dbg!((s1.score, s2.score, s3.score, s4.score, s5.score));
+
+    state.score = 123456;
+    if chmin!(state.score, s1.score) {
+        state = s1;
+    }
+    if chmin!(state.score, s2.score) {
+        state = s2;
+    }
+    if chmin!(state.score, s3.score) {
+        state = s3;
+    }
+    if chmin!(state.score, s4.score) {
+        state = s4;
+    }
+    if chmin!(state.score, s5.score) {
+        state = s5;
+    }
+    // 1. 回収の順番最適化
+
+    // ===============
     // 全部回収した
     let mut used = vec![vec![false; 20]; 20];
+
+    let mut last = state.pos;
+    let (xs, xg, xr) = if last.0 + 10 >= 20 {
+        (last.0 - 10, last.0, true)
+    } else {
+        (last.0, last.0 + 10, false)
+    };
+    let (ys, yg, yr) = if last.1 + 10 >= 20 {
+        (last.1 - 10, last.1, true)
+    } else {
+        (last.1, last.1 + 10, false)
+    };
+    // dbg!((xs, xg, xr, ys, yg, yr));
     while state.took.len() > 0 {
         let mut nearest_dis = INF;
         let mut nearest = None;
-        for i in 0..20 {
-            for j in 0..20 {
+
+        for i in xs..xg {
+            for j in ys..yg {
+                // dbg!((i, j));
+                let i = if xr { xg + xs - i } else { i };
+                let j = if yr { yg + ys - j } else { j };
+                // dbg!((i, j));
+                // dbg!("==l");
                 if used[i][j] {
                     continue;
                 }
@@ -88,6 +160,7 @@ fn centering(input: &Input) {
         }
     }
     // // 最後
+    // かるい。
     for to in 0..100 {
         let target = state.field[to].unwrap();
         state.move_to(target);
@@ -95,17 +168,20 @@ fn centering(input: &Input) {
     }
     state.output();
 }
+/// 二点間の距離
 fn dif(a: (usize, usize), b: (usize, usize)) -> i64 {
     let dx = a.0 as i64 - b.0 as i64;
     let dy = a.1 as i64 - b.1 as i64;
     (dx.abs() + dy.abs()) as i64
 }
+/// 入力
 struct Input {
     xy: Vec<(usize, usize)>,
 }
 impl Input {}
 
 /// 解と現在地
+#[derive(Clone)]
 struct State {
     pos: (usize, usize),
     field: Vec<Option<(usize, usize)>>,
@@ -189,7 +265,61 @@ impl State {
             print!("{}", op);
         }
     }
+    fn gather(&mut self) {
+        for to in 0..100 {
+            let target = self.field[to].unwrap();
+            self.move_to(target);
+            self.push();
+        }
+    }
+    /// 貪欲に最短経路にいく
+    fn pick_shortest(&mut self) {
+        let mut stack = vec![];
+        let mut visited = vec![false; 100];
+        self.move_to(self.field[0].unwrap());
+        self.push();
+        stack.push(0);
+        visited[0] = true;
+        while let Some(pp) = stack.pop() {
+            visited[pp] = true;
+            let mut nearest_dis = INF;
+            let mut nearest = None;
+            for i in 0..100 {
+                if i == pp || visited[i] {
+                    continue;
+                }
+                if let Some(t) = self.field[i] {
+                    if chmin!(nearest_dis, dif(self.pos, t)) {
+                        nearest = Some(i);
+                    }
+                }
+            }
+            if let Some(a) = nearest {
+                self.move_to(self.field[a].unwrap());
+                self.push();
+                stack.push(a);
+            }
+        }
+    }
+    fn pick_block(&mut self, block_size: usize) {
+        // 20の約数がいい？
+        // let mut block_size = 4;
+        for base_x in 0..20 / block_size {
+            for y in 0..20 {
+                let y = if base_x % 2 == 0 { y } else { 20 - y - 1 };
+                for dx in 0..block_size {
+                    let dx = if y % 2 == 0 { dx } else { block_size - dx - 1 };
+                    let target = (base_x * block_size + dx, y);
+                    if self.rev_field[target.0][target.1] != None {
+                        self.move_to(target);
+                        self.push();
+                    }
+                }
+            }
+        }
+    }
 }
+const INF: i64 = 1 << 60;
 struct Deque {
     data: Vec<(usize, usize)>, // カードの数字, index
     left: usize,
