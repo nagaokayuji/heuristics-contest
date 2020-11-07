@@ -16,7 +16,8 @@ fn main() {
     get_time();
     let mut input = Input { xy: xy };
     // greedy(&input);
-    centering(&input);
+    // centering(&input);
+    simulated_annealing(&input);
 }
 /// 貪欲(単純)
 fn greedy(input: &Input) {
@@ -79,6 +80,87 @@ fn centering(input: &Input) {
     state.collect_imp();
     // 出力
     state.output();
+}
+fn simulated_annealing(input: &Input) {
+    const INF: i64 = 1 << 60;
+    let mut state = State::new(&input);
+    let mut s1 = state.clone();
+    let mut s2 = state.clone();
+    let mut s3 = state.clone();
+    let mut s4 = state.clone();
+    let mut s5 = state.clone();
+    s1.pick_shortest();
+    s2.pick_block(2);
+    s3.pick_block(4);
+    s4.pick_block(5);
+    s5.pick_block(10);
+    state.score = 123456;
+    if chmin!(state.score, s1.score) {
+        state = s1;
+    }
+    if chmin!(state.score, s2.score) {
+        state = s2;
+    }
+    if chmin!(state.score, s3.score) {
+        state = s3;
+    }
+    if chmin!(state.score, s4.score) {
+        state = s4;
+    }
+    if chmin!(state.score, s5.score) {
+        state = s5;
+    }
+    let mut nice = state.took.clone();
+    let mut out = vec![];
+    while let Some(x) = nice.pop() {
+        out.push(x);
+    }
+    out.reverse();
+
+    const T0: f64 = 2e2; // 開始時点の温度
+    const T1: f64 = 5f64; // 低い温度
+    const TL: f64 = 2.7f64;
+    let mut rng = thread_rng();
+    let mut T = T0;
+    let mut state = State::new(&input);
+    let mut best = state.evaluate(&out);
+    let mut best_out = out.clone();
+    let mut cnt = 0i64;
+    let mut rng = thread_rng();
+    loop {
+        cnt += 1;
+        if cnt % 100 == 0 {
+            let t = get_time() / TL;
+            if t >= 1.0 {
+                break;
+            }
+            T = T0.powf(1.0 - t) * T1.powf(t);
+        }
+        let old_score = best;
+        let p1 = rng.gen_range(0, 100);
+        let p2 = rng.gen_range(0, 100);
+        let mut new_out = best_out.clone();
+        new_out.swap(p1, p2);
+        let mut state = State::new(&input);
+        let new_score = state.evaluate(&new_out);
+        if new_score > best {
+            // dbg!("imp");
+            best_out = new_out;
+        } else {
+            if rng.gen_bool(f64::exp((new_score - best) as f64 / T)) {
+                best_out = new_out;
+            }
+        }
+    }
+    dbg!(cnt);
+    let mut state = State::new(&input);
+    // // 配置
+    state.pick_by_out_and_place(&best_out);
+    // 集める
+    state.collect_imp();
+    // 出力
+    state.output();
+    // dbg!(state.score);
 }
 /// 二点間の距離
 fn dif(a: (usize, usize), b: (usize, usize)) -> i64 {
@@ -143,6 +225,14 @@ struct State {
     over: Vec<usize>,
 }
 impl State {
+    /// 高いほうがよい評価
+    fn evaluate(&mut self, out: &Vec<usize>) -> i64 {
+        // // 配置
+        self.pick_by_out_and_place(&out);
+        // 集める
+        self.collect_imp();
+        10000 - self.score as i64 * 4
+    }
     /// 最初の状態
     fn new(input: &Input) -> State {
         let mut rev_field = vec![vec![None; 20]; 20];
@@ -200,7 +290,7 @@ impl State {
     }
     fn push(&mut self) {
         if self.getNum() == None {
-            dbg!("やばい@push");
+            // dbg!("やばい@push");
             return;
         }
         self.operations.push('I');
@@ -211,11 +301,11 @@ impl State {
     }
     fn pop(&mut self) {
         if self.took.len() == 0 {
-            dbg!("やばそう@pop");
+            // dbg!("やばそう@pop");
             return;
         }
         if self.rev_field[self.pos.0][self.pos.1] != None {
-            dbg!("やばい@pop");
+            // dbg!("やばい@pop");
             return;
         }
         self.operations.push('O');
