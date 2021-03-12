@@ -45,16 +45,33 @@ impl Rect {
         return (self.ex - self.sx) * (self.ey - self.sy);
     }
 }
+
+/// 答え出力
 fn output(out: &[Rect]) {
     for &rect in out.iter() {
         println!("{} {} {} {}", rect.sx, rect.sy, rect.ex, rect.ey);
     }
 }
+
 struct State {
     out: Vec<Rect>,
 }
-impl State {}
-fn calc_score(input: &Input, out: &Vec<Rect>) -> f64 {}
+impl State {
+    fn score(&self, input: &Input) -> f64 {
+        return calc_score(input, &self.out);
+    }
+}
+
+/// スコア計算
+fn calc_score(input: &Input, out: &Vec<Rect>) -> f64 {
+    let mut sum = 0f64;
+    for i in 0..input.n {
+        let mn = min(out[i].area(), input.xyr[i].2) as f64;
+        let mx = max(out[i].area(), input.xyr[i].2) as f64;
+        sum += 1f64 - (1f64 - mn / mx).powi(2);
+    }
+    sum
+}
 
 /// 実行時間
 fn get_time() -> f64 {
