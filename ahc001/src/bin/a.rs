@@ -59,6 +59,7 @@ fn output(out: &[Rect]) {
 #[derive(Clone)]
 struct State {
     out: Vec<Rect>,
+    score: f64,
 }
 impl State {
     fn new(input: &Input) -> State {
@@ -71,14 +72,22 @@ impl State {
                 ey: xyr.1 + 1,
             });
         }
-        State { out: out }
+        let score = calc_score(&input, &out);
+        State {
+            out: out,
+            score: score,
+        }
     }
+
     fn score(&self, input: &Input) -> f64 {
         return calc_score(input, &self.out);
     }
-    fn change(&self, index: usize, to: Rect) -> f64 {
+
+    fn random_change(&mut self) {
+        let mut rng = thread_rng();
         let mut nx = self.clone();
-        nx.out[index] = to;
+        let n = self.out.len();
+        let index: usize = rng.gen_range(0, n);
     }
 }
 
