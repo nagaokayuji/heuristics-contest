@@ -21,7 +21,10 @@ fn main() {
     solve(&input);
 }
 
-fn solve(input: &Input) {}
+fn solve(input: &Input) {
+    let mut state = State::new(&input);
+    output(&state.out);
+}
 /// 入力
 struct Input {
     n: usize,
@@ -53,13 +56,50 @@ fn output(out: &[Rect]) {
     }
 }
 
+#[derive(Clone)]
 struct State {
     out: Vec<Rect>,
 }
 impl State {
+    fn new(input: &Input) -> State {
+        let mut out = vec![];
+        for (i, &xyr) in input.xyr.iter().enumerate() {
+            out.push(Rect {
+                sx: xyr.0,
+                sy: xyr.1,
+                ex: xyr.0 + 1,
+                ey: xyr.1 + 1,
+            });
+        }
+        State { out: out }
+    }
     fn score(&self, input: &Input) -> f64 {
         return calc_score(input, &self.out);
     }
+    fn change(&self, index: usize, to: Rect) -> f64 {
+        let mut nx = self.clone();
+        nx.out[index] = to;
+    }
+}
+
+fn is_valid(input: &Input, out: &Vec<Rect>) -> bool {
+    // 他の矩形と被らないか
+    fn is_valid_duplicate(out: &Vec<Rect>) -> bool {
+        let n = out.len();
+        for i in 0..n {
+            for j in i + 1..n {
+                if has_duplicate_area(&out[i], &out[j]) {
+                    return false;
+                }
+            }
+        }
+        true
+    }
+    is_valid_duplicate(&out)
+}
+fn has_duplicate_area(a: &Rect, b: &Rect) -> bool {
+    ((a.sx..=a.ex).contains(&b.sx) || (b.sx..=b.ex).contains(&a.sx))
+        && ((a.sy..=a.ey).contains(&b.sy) || (b.sy..=b.ey).contains(&a.sy))
 }
 
 /// スコア計算
