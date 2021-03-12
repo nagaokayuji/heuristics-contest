@@ -66,10 +66,10 @@ impl Rect {
             && (0..10000).contains(&self.ey);
     }
     fn next(&self, direction: usize) -> Option<Rect> {
-        let dsx = [0, 0, 0, -1];
-        let dsy = [-1, 0, 0, 0];
-        let dex = [0, 1, 0, 0];
-        let dey = [0, 0, 1, 0];
+        let dsx = [-2, -1, 0, 0, 0, -1, 1, 0, 0, 0];
+        let dsy = [-2, -1, -1, 0, 0, 0, 0, 1, 0, 0];
+        let dex = [2, 1, 0, 1, 0, 0, 0, 0, -1, 0];
+        let dey = [2, 1, 0, 0, 1, 0, 0, 0, 0, -1];
 
         let rect = Rect {
             sx: self.sx + dsx[direction],
@@ -95,7 +95,7 @@ fn output(out: &[Rect]) {
 struct State {
     out: Vec<Rect>,
     score: f64,
-    threshold: i64,
+    threshold: f64,
 }
 impl State {
     fn new(input: &Input) -> State {
@@ -112,7 +112,7 @@ impl State {
         State {
             out: out,
             score: score,
-            threshold: 2i64,
+            threshold: 0.5f64,
         }
     }
 
@@ -127,7 +127,7 @@ impl State {
         // decide target index
         let mut index: usize = rng.gen_range(0, n);
         let mut count = 0i64;
-        while (self.out[index].area() - input.xyr[index].2).abs() < self.threshold {
+        while one_score(input.xyr[index].2, self.out[index].area()) < self.threshold {
             index = rng.gen_range(0, n);
             count += 1;
             if count % 100 == 0 {
@@ -144,24 +144,35 @@ impl State {
         let mut best_score = self.score(&input);
 
         let mut rect: Rect = self.out[index];
+        let mut best_one_score = one_score(input.xyr[index].2, rect.area());
 
-        for direction in 0..4 {
+        for direction in 0..12 {
             let nextRect = rect.next(direction);
             if let Some(x) = nextRect {
                 nx[index] = x;
                 if !is_valid(&input, &nx) {
                     continue;
                 }
-                let nx_score = calc_score(&input, &nx);
-                if best_score < nx_score {
+                if best_one_score < one_score(input.xyr[index].2, x.area()) {
                     best = nx.clone();
-                    best_score = nx_score;
+                    break;
                 }
+                // let nx_score = calc_score(&input, &nx);
+                // if best_score < nx_score {
+                //     best = nx.clone();
+                //     best_score = nx_score;
+                // }
             }
         }
         self.out = best;
-        self.score = best_score;
+        // self.score = best_score;
     }
+}
+
+fn one_score(request: i64, area: i64) -> f64 {
+    let mn = min(request, area) as f64;
+    let mx = max(request, area) as f64;
+    return mn / mx;
 }
 
 fn is_valid(input: &Input, out: &Vec<Rect>) -> bool {
