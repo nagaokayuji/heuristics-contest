@@ -26,10 +26,13 @@ fn solve(input: &Input) {
     let mut count = 0i64;
     loop {
         count += 1;
-        if count % 100 == 0 {
-            if get_time() > LIMIT {
+        if count % 200 == 0 {
+            let t = get_time();
+            if t > LIMIT {
                 break;
             }
+            state.threshold = 1f64 - t / LIMIT;
+            state.mul = 1 + 5 * (1f64 - t / LIMIT) as i64;
         }
         state.random_change(&input);
     }
@@ -65,17 +68,69 @@ impl Rect {
             && (0..10000).contains(&self.ex)
             && (0..10000).contains(&self.ey);
     }
-    fn next(&self, direction: usize) -> Option<Rect> {
-        let dsx = [-2, -1, 0, 0, 0, -1, 1, 0, 0, 0];
-        let dsy = [-2, -1, -1, 0, 0, 0, 0, 1, 0, 0];
-        let dex = [2, 1, 0, 1, 0, 0, 0, 0, -1, 0];
-        let dey = [2, 1, 0, 0, 1, 0, 0, 0, 0, -1];
+    fn all(&self, bai: i64) -> Option<Rect> {
+        let direction = 0;
+        let dsx = [-1];
+        let dsy = [-1];
+        let dex = [1];
+        let dey = [1];
 
         let rect = Rect {
-            sx: self.sx + dsx[direction],
-            sy: self.sy + dsy[direction],
-            ex: self.ex + dex[direction],
-            ey: self.ey + dey[direction],
+            sx: self.sx + dsx[direction] * bai,
+            sy: self.sy + dsy[direction] * bai,
+            ex: self.ex + dex[direction] * bai,
+            ey: self.ey + dey[direction] * bai,
+        };
+        if !rect.is_valid() {
+            return None;
+        }
+        return Some(rect);
+    }
+    fn diag(&self, bai: i64, direction: usize) -> Option<Rect> {
+        let dsx = [-1, -1, 0, 0];
+        let dsy = [-1, 0, -1, 0];
+        let dex = [0, 0, 1, 1];
+        let dey = [0, 1, 0, 1];
+
+        let rect = Rect {
+            sx: self.sx + dsx[direction] * bai,
+            sy: self.sy + dsy[direction] * bai,
+            ex: self.ex + dex[direction] * bai,
+            ey: self.ey + dey[direction] * bai,
+        };
+        if !rect.is_valid() {
+            return None;
+        }
+        return Some(rect);
+    }
+    fn lr(&self, bai: i64, direction: usize) -> Option<Rect> {
+        let dsx = [-1, 0];
+        let dsy = [0, -1];
+        let dex = [1, 0];
+        let dey = [0, 1];
+
+        let rect = Rect {
+            sx: self.sx + dsx[direction] * bai,
+            sy: self.sy + dsy[direction] * bai,
+            ex: self.ex + dex[direction] * bai,
+            ey: self.ey + dey[direction] * bai,
+        };
+        if !rect.is_valid() {
+            return None;
+        }
+        return Some(rect);
+    }
+    fn one(&self, bai: i64, direction: usize) -> Option<Rect> {
+        let dsx = [-1, 0, 0, 0];
+        let dsy = [0, -1, 0, 0];
+        let dex = [0, 0, 1, 0];
+        let dey = [0, 0, 0, 1];
+
+        let rect = Rect {
+            sx: self.sx + dsx[direction] * bai,
+            sy: self.sy + dsy[direction] * bai,
+            ex: self.ex + dex[direction] * bai,
+            ey: self.ey + dey[direction] * bai,
         };
         if !rect.is_valid() {
             return None;
@@ -96,6 +151,7 @@ struct State {
     out: Vec<Rect>,
     score: f64,
     threshold: f64,
+    mul: i64,
 }
 impl State {
     fn new(input: &Input) -> State {
@@ -113,6 +169,7 @@ impl State {
             out: out,
             score: score,
             threshold: 0.5f64,
+            mul: 4,
         }
     }
 
@@ -127,7 +184,9 @@ impl State {
         // decide target index
         let mut index: usize = rng.gen_range(0, n);
         let mut count = 0i64;
-        while one_score(input.xyr[index].2, self.out[index].area()) < self.threshold {
+        while one_score(input.xyr[index].2, self.out[index].area()) > self.threshold
+            && input.xyr[index].2 > self.out[index].area()
+        {
             index = rng.gen_range(0, n);
             count += 1;
             if count % 100 == 0 {
@@ -146,22 +205,67 @@ impl State {
         let mut rect: Rect = self.out[index];
         let mut best_one_score = one_score(input.xyr[index].2, rect.area());
 
-        for direction in 0..12 {
-            let nextRect = rect.next(direction);
+        let mul = self.mul;
+
+        // all
+        {
+            let nextRect = rect.all(mul);
             if let Some(x) = nextRect {
                 nx[index] = x;
-                if !is_valid(&input, &nx) {
-                    continue;
+                if is_valid(&input, &nx) && best_one_score < one_score(input.xyr[index].2, x.area())
+                {
+                    self.out = nx.clone();
+                    return;
                 }
-                if best_one_score < one_score(input.xyr[index].2, x.area()) {
-                    best = nx.clone();
-                    break;
+            } else {
+            }
+        }
+        // diag
+        {
+            for direction in 0..4 {
+                let nextRect = rect.diag(mul, direction);
+                if let Some(x) = nextRect {
+                    nx[index] = x;
+                    if !is_valid(&input, &nx) {
+                        continue;
+                    }
+                    if best_one_score < one_score(input.xyr[index].2, x.area()) {
+                        self.out = nx.clone();
+                        return;
+                    }
                 }
-                // let nx_score = calc_score(&input, &nx);
-                // if best_score < nx_score {
-                //     best = nx.clone();
-                //     best_score = nx_score;
-                // }
+            }
+        }
+        // lr
+        {
+            for direction in 0..2 {
+                let nextRect = rect.lr(mul, direction);
+                if let Some(x) = nextRect {
+                    nx[index] = x;
+                    if !is_valid(&input, &nx) {
+                        continue;
+                    }
+                    if best_one_score < one_score(input.xyr[index].2, x.area()) {
+                        self.out = nx.clone();
+                        return;
+                    }
+                }
+            }
+        }
+        // one
+        {
+            for direction in 0..4 {
+                let nextRect = rect.one(mul, direction);
+                if let Some(x) = nextRect {
+                    nx[index] = x;
+                    if !is_valid(&input, &nx) {
+                        continue;
+                    }
+                    if best_one_score < one_score(input.xyr[index].2, x.area()) {
+                        self.out = nx.clone();
+                        return;
+                    }
+                }
             }
         }
         self.out = best;
