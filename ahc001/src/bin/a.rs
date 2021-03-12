@@ -23,13 +23,25 @@ fn main() {
 
 fn solve(input: &Input) {
     let mut state = State::new(&input);
+    let mut count = 0i64;
+    loop {
+        count += 1;
+        if count % 100 == 0 {
+            if get_time() > LIMIT {
+                break;
+            }
+        }
+        state.random_change(&input);
+    }
     output(&state.out);
 }
+
 /// 入力
 struct Input {
     n: usize,
     xyr: Vec<(i64, i64, i64)>,
 }
+
 // 出力１個分
 #[derive(Clone, Copy)]
 struct Rect {
@@ -47,6 +59,29 @@ impl Rect {
         //
         return (self.ex - self.sx) * (self.ey - self.sy);
     }
+    fn is_valid(&self) -> bool {
+        return (0..10000).contains(&self.sx)
+            && (0..10000).contains(&self.sy)
+            && (0..10000).contains(&self.ex)
+            && (0..10000).contains(&self.ey);
+    }
+    fn next(&self, direction: usize) -> Option<Rect> {
+        let dsx = [0, 0, 0, -1];
+        let dsy = [-1, 0, 0, 0];
+        let dex = [0, 1, 0, 0];
+        let dey = [0, 0, 1, 0];
+
+        let rect = Rect {
+            sx: self.sx + dsx[direction],
+            sy: self.sy + dsy[direction],
+            ex: self.ex + dex[direction],
+            ey: self.ey + dey[direction],
+        };
+        if !rect.is_valid() {
+            return None;
+        }
+        return Some(rect);
+    }
 }
 
 /// 答え出力
@@ -60,6 +95,7 @@ fn output(out: &[Rect]) {
 struct State {
     out: Vec<Rect>,
     score: f64,
+    threshold: i64,
 }
 impl State {
     fn new(input: &Input) -> State {
@@ -76,6 +112,7 @@ impl State {
         State {
             out: out,
             score: score,
+            threshold: 2i64,
         }
     }
 
@@ -83,11 +120,47 @@ impl State {
         return calc_score(input, &self.out);
     }
 
-    fn random_change(&mut self) {
+    fn random_change(&mut self, input: &Input) {
         let mut rng = thread_rng();
-        let mut nx = self.clone();
         let n = self.out.len();
-        let index: usize = rng.gen_range(0, n);
+
+        // decide target index
+        let mut index: usize = rng.gen_range(0, n);
+        let mut count = 0i64;
+        while (self.out[index].area() - input.xyr[index].2).abs() < self.threshold {
+            index = rng.gen_range(0, n);
+            count += 1;
+            if count % 100 == 0 {
+                if get_time() > LIMIT {
+                    return;
+                }
+            }
+        }
+
+        let mut nx = self.out.clone();
+
+        // 4 directions
+        let mut best = self.out.clone();
+        let mut best_score = self.score(&input);
+
+        let mut rect: Rect = self.out[index];
+
+        for direction in 0..4 {
+            let nextRect = rect.next(direction);
+            if let Some(x) = nextRect {
+                nx[index] = x;
+                if !is_valid(&input, &nx) {
+                    continue;
+                }
+                let nx_score = calc_score(&input, &nx);
+                if best_score < nx_score {
+                    best = nx.clone();
+                    best_score = nx_score;
+                }
+            }
+        }
+        self.out = best;
+        self.score = best_score;
     }
 }
 
@@ -117,7 +190,7 @@ fn calc_score(input: &Input, out: &Vec<Rect>) -> f64 {
     for i in 0..input.n {
         let mn = min(out[i].area(), input.xyr[i].2) as f64;
         let mx = max(out[i].area(), input.xyr[i].2) as f64;
-        sum += 1f64 - (1f64 - mn / mx).powi(2);
+        sum += mn / mx;
     }
     sum
 }
