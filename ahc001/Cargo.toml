@@ -1,0 +1,14 @@
+[package]
+name = "ahc001"
+version = "0.1.0"
+authors = ["Yuji Nagaoka <yvay5cqe@gmail.com>"]
+edition = "2018"
+
+# dependencies added to new project
+[dependencies]
+ rand = "0.7.3"
+ proconio = { version = "0.3.6", features = ["derive"] }
+
+[profile.release]
+lto = true
+panic = 'abort'
